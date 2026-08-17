@@ -1,0 +1,27 @@
+# Build artifacts
+build/
+Debug/
+Release/
+
+# CubeMX temporary files
+mx.scratch
+
+# IDE configuration files (personal/environment-specific)
+.vscode/
+.settings/
+.clangd
+
+# Build artifacts and temporary files
+*.o
+*.a
+*.so
+*.elf
+*.axf
+*.hex
+*.bin
+
+# Editor and system files
+.DS_Store
+*.swp
+*.swo
+*~
