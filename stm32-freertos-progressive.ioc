@@ -2,8 +2,9 @@
 CAD.formats=
 CAD.pinconfig=
 CAD.provider=
-FREERTOS.IPParameters=Tasks01
-FREERTOS.Tasks01=defaultTask,24,128,StartDefaultTask,Default,NULL,Dynamic,NULL,NULL
+FREERTOS.FootprintOK=true
+FREERTOS.IPParameters=Tasks01,FootprintOK
+FREERTOS.Tasks01=LEDBlinkTask,24,128,StartLEDBlinkTask,Default,NULL,Dynamic,NULL,NULL
 File.Version=6
 GPIO.groupedBy=Group By Peripherals
 KeepUserPlacement=false
@@ -176,3 +177,4 @@ VP_SYS_VS_tim4.Mode=TIM4
 VP_SYS_VS_tim4.Signal=SYS_VS_tim4
 board=NUCLEO-F103RB
 boardIOC=true
+rtos.0.ip=FREERTOS
