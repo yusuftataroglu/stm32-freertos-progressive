@@ -25,6 +25,7 @@
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include <string.h>
+#include "lcd.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -90,10 +91,6 @@ void StartLCDTask(void *argument);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void LCD_Init();
-void LCD_WriteChar(char c);
-void LCD_WriteString(const char *str);
-void LCD_Cursor(uint8_t row, uint8_t col);
 /* USER CODE END 0 */
 
 /**
@@ -327,9 +324,11 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
     messageQueue_t msg = {0};
     memcpy(msg.data, data, Size);
     msg.event_id = 1;
+
     // Debug: Memcpy sonrası
     printf(">>> After memcpy, msg.data[0..3]: %02X %02X %02X %02X\r\n",
            msg.data[0], msg.data[1], msg.data[2], msg.data[3]);
+
     // Send the received data in the queue to the LCD task for processing
     osMessageQueuePut(lcdQueueHandle, &msg, 0, 0);
 
@@ -338,10 +337,6 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
   }
 }
 
-void LCD_Init() {}
-void LCD_WriteChar(char c) {}
-void LCD_WriteString(const char *str) {}
-void LCD_Cursor(uint8_t row, uint8_t col) {}
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartLEDBlinkTask */
@@ -388,9 +383,13 @@ void StartUSARTTask(void *argument) {
 /* USER CODE END Header_StartLCDTask */
 void StartLCDTask(void *argument) {
   /* USER CODE BEGIN StartLCDTask */
+  messageQueue_t msg = {0};
+  LCD_Init();
   /* Infinite loop */
   for (;;) {
-    osDelay(1);
+    osMessageQueueGet(lcdQueueHandle, &msg, NULL, osWaitForever);
+    LCD_Clear();
+    LCD_WriteString((const char *)msg.data);
   }
   /* USER CODE END StartLCDTask */
 }
