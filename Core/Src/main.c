@@ -19,15 +19,20 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "cmsis_os.h"
+#include "cmsis_os2.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+typedef struct {
+  uint8_t event_id;
+  uint8_t data[32];
+} messageQueue_t;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -57,8 +62,18 @@ const osThreadAttr_t USARTTask_attributes = {
     .stack_size = 128 * 4,
     .priority = (osPriority_t)osPriorityNormal,
 };
+/* Definitions for LCDTask */
+osThreadId_t LCDTaskHandle;
+const osThreadAttr_t LCDTask_attributes = {
+    .name = "LCDTask",
+    .stack_size = 128 * 4,
+    .priority = (osPriority_t)osPriorityNormal,
+};
+/* Definitions for lcdQueue */
+osMessageQueueId_t lcdQueueHandle;
+const osMessageQueueAttr_t lcdQueue_attributes = {.name = "lcdQueue"};
 /* USER CODE BEGIN PV */
-
+uint8_t data[32] = {0};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -66,7 +81,8 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 void StartLEDBlinkTask(void *argument);
-void StartUSARTTASK(void *argument);
+void StartUSARTTask(void *argument);
+void StartLCDTask(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -74,7 +90,10 @@ void StartUSARTTASK(void *argument);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+void LCD_Init();
+void LCD_WriteChar(char c);
+void LCD_WriteString(const char *str);
+void LCD_Cursor(uint8_t row, uint8_t col);
 /* USER CODE END 0 */
 
 /**
@@ -126,6 +145,11 @@ int main(void) {
   /* start timers, add new ones, ... */
   /* USER CODE END RTOS_TIMERS */
 
+  /* Create the queue(s) */
+  /* creation of lcdQueue */
+  lcdQueueHandle =
+      osMessageQueueNew(1, sizeof(messageQueue_t), &lcdQueue_attributes);
+
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
@@ -136,7 +160,10 @@ int main(void) {
       osThreadNew(StartLEDBlinkTask, NULL, &LEDBlinkTask_attributes);
 
   /* creation of USARTTask */
-  USARTTaskHandle = osThreadNew(StartUSARTTASK, NULL, &USARTTask_attributes);
+  USARTTaskHandle = osThreadNew(StartUSARTTask, NULL, &USARTTask_attributes);
+
+  /* creation of LCDTask */
+  LCDTaskHandle = osThreadNew(StartLCDTask, NULL, &LCDTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -246,6 +273,15 @@ static void MX_GPIO_Init(void) {
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
 
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOB,
+                    lcdRegisterSelect_Pin | lcdReadWrite_Pin | lcdData0_Pin |
+                        lcdData1_Pin | lcdData2_Pin | lcdData3_Pin,
+                    GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(lcdEnable_GPIO_Port, lcdEnable_Pin, GPIO_PIN_RESET);
+
   /*Configure GPIO pin : B1_Pin */
   GPIO_InitStruct.Pin = B1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
@@ -259,6 +295,23 @@ static void MX_GPIO_Init(void) {
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
 
+  /*Configure GPIO pins : lcdRegisterSelect_Pin lcdReadWrite_Pin lcdData0_Pin
+     lcdData1_Pin lcdData2_Pin lcdData3_Pin */
+  GPIO_InitStruct.Pin = lcdRegisterSelect_Pin | lcdReadWrite_Pin |
+                        lcdData0_Pin | lcdData1_Pin | lcdData2_Pin |
+                        lcdData3_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : lcdEnable_Pin */
+  GPIO_InitStruct.Pin = lcdEnable_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(lcdEnable_GPIO_Port, &GPIO_InitStruct);
+
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI15_10_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
@@ -269,7 +322,26 @@ static void MX_GPIO_Init(void) {
 }
 
 /* USER CODE BEGIN 4 */
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
+  if (huart->Instance == USART2) {
+    messageQueue_t msg = {0};
+    memcpy(msg.data, data, Size);
+    msg.event_id = 1;
+    // Debug: Memcpy sonrası
+    printf(">>> After memcpy, msg.data[0..3]: %02X %02X %02X %02X\r\n",
+           msg.data[0], msg.data[1], msg.data[2], msg.data[3]);
+    // Send the received data in the queue to the LCD task for processing
+    osMessageQueuePut(lcdQueueHandle, &msg, 0, 0);
 
+    // After processing, restart the receive operation
+    HAL_UARTEx_ReceiveToIdle_IT(&huart2, data, sizeof(data));
+  }
+}
+
+void LCD_Init() {}
+void LCD_WriteChar(char c) {}
+void LCD_WriteString(const char *str) {}
+void LCD_Cursor(uint8_t row, uint8_t col) {}
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartLEDBlinkTask */
@@ -289,22 +361,38 @@ void StartLEDBlinkTask(void *argument) {
   /* USER CODE END 5 */
 }
 
-/* USER CODE BEGIN Header_StartUSARTTASK */
+/* USER CODE BEGIN Header_StartUSARTTask */
 /**
  * @brief Function implementing the USARTTask thread.
  * @param argument: Not used
  * @retval None
  */
-/* USER CODE END Header_StartUSARTTASK */
-void StartUSARTTASK(void *argument) {
-  /* USER CODE BEGIN StartUSARTTASK */
+/* USER CODE END Header_StartUSARTTask */
+void StartUSARTTask(void *argument) {
+  /* USER CODE BEGIN StartUSARTTask */
+
+  HAL_UARTEx_ReceiveToIdle_IT(&huart2, data, sizeof(data));
   /* Infinite loop */
   for (;;) {
-    // UART test: Print message every 2 seconds
-    printf("USART2 Task running...\r\n");
-    osDelay(2000);
+    osDelay(1000);
   }
-  /* USER CODE END StartUSARTTASK */
+  /* USER CODE END StartUSARTTask */
+}
+
+/* USER CODE BEGIN Header_StartLCDTask */
+/**
+ * @brief Function implementing the LCDTask thread.
+ * @param argument: Not used
+ * @retval None
+ */
+/* USER CODE END Header_StartLCDTask */
+void StartLCDTask(void *argument) {
+  /* USER CODE BEGIN StartLCDTask */
+  /* Infinite loop */
+  for (;;) {
+    osDelay(1);
+  }
+  /* USER CODE END StartLCDTask */
 }
 
 /**
