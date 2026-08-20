@@ -55,7 +55,7 @@ LCD sürücüsünün genel API'si (Core/Inc/lcd.h), uygulaması ise
 (Core/Src/lcd.c) içindedir.
 
 ## Yazılım Mimarisi
-
+```
 text
 Terminal
 	|
@@ -73,7 +73,7 @@ StartLCDTask
 	|
 	v
 HD44780 LCD
-
+```
 
 - UART callback'i interrupt context içinde çalışır ve queue'ya bloklamadan mesaj bırakır.
 - LCD task queue'dan bloklayarak mesaj bekler.
@@ -84,7 +84,7 @@ HD44780 LCD
 ## Desteklenen LCD Komutları
 
 Terminalden aşağıdaki komutlar gönderilebilir:
-
+```
 text
 clear
 home
@@ -100,7 +100,7 @@ func_1line
 func_2line
 func_5x8
 func_5x10
-
+```
 
 Komut dışındaki metinler LCD'ye normal karakter verisi olarak yazdırılır.
 
