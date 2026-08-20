@@ -19,6 +19,8 @@ Function set ->             0   0   1   DL  N   F   x   x
 I/D = 1: Increment
 I/D = 0: Decrement
 S = 1: Accompanies display shift
+D = 1: Sets entire display on/off
+C = 1: Cursor on/off and blinking of cursor position character (B).
 S/C = 1: Display shift
 S/C = 0: Cursor move
 R/L = 1: Shift to the right
@@ -29,10 +31,10 @@ F = 1: 5 × 10 dots, F = 0: 5 × 8 dots
 */
 
 // Clear Display (0x01, sabit) - parametresi yok, tek başına gönderilir
-#define LCD_CMD_CLEAR_DISPLAY 0x01U
+#define LCD_CLEAR_DISPLAY 0x01U
 
 // Return Home (0x02, sabit) - parametresi yok, tek başına gönderilir
-#define LCD_CMD_RETURN_HOME 0x02U
+#define LCD_RETURN_HOME 0x02U
 
 // Entry Mode Set (0x04 taban) - I/D (bit 1), S (bit 0)
 #define LCD_ENTRY_MODE_SET 0x04U
@@ -45,10 +47,10 @@ F = 1: 5 × 10 dots, F = 0: 5 × 8 dots
 #define LCD_DISPLAY_CONTROL 0x08U
 #define LCD_DISPLAY_ON 0x04U // D = 1
 #define LCD_DISPLAY_OFF 0x00U
-#define LCD_CURSOR_ON 0x02U // C = 1
-#define LCD_CURSOR_OFF 0x00U
-#define LCD_BLINK_ON 0x01U // B = 1
-#define LCD_BLINK_OFF 0x00U
+#define LCD_DISPLAY_CURSOR_ON 0x02U // C = 1
+#define LCD_DISPLAY_CURSOR_OFF 0x00U
+#define LCD_DISPLAY_BLINK_ON 0x01U // B = 1
+#define LCD_DISPLAY_BLINK_OFF 0x00U
 
 // Cursor or Display Shift (0x10 taban) - S/C (bit 3), R/L (bit 2)
 #define LCD_SHIFT_CURSOR_OR_DISPLAY 0x10U
@@ -58,7 +60,7 @@ F = 1: 5 × 10 dots, F = 0: 5 × 8 dots
 #define LCD_SHIFT_LEFT 0x00U    // R/L = 0
 
 // Function Set (0x20 taban) - DL (bit 4), N (bit 3), F (bit 2)
-#define LCD_FUNCTION_SET 0x20U
+#define LCD_FUNC_SET 0x20U
 #define LCD_FUNC_8BIT 0x10U  // DL = 1
 #define LCD_FUNC_4BIT 0x00U  // DL = 0
 #define LCD_FUNC_2LINE 0x08U // N = 1
@@ -66,12 +68,21 @@ F = 1: 5 × 10 dots, F = 0: 5 × 8 dots
 #define LCD_FUNC_5x10 0x04U  // F = 1
 #define LCD_FUNC_5x8 0x00U   // F = 0
 
+// Set DDRAM Address (0x80 taban) — AC (Address Counter), 7 bit adres
+#define LCD_SET_DDRAM_ADDR 0x80U
+#define LCD_LINE1_ADDR 0x00U
+#define LCD_LINE2_ADDR 0x40U
+
+// Delay constants for LCD operations
+#define LCD_DELAY_LONG_MS 2
+#define LCD_DELAY_SHORT_MS 1
+
 void LCD_Init(void);
-void LCD_Clear(void);
-void LCD_WriteChar(char character);
-void LCD_WriteString(const char *string);
-void LCD_Cursor(uint8_t row, uint8_t column);
+void LCD_Print(const uint8_t *data, uint8_t len);
+void LCD_WriteCommand(uint8_t cmd);
+int8_t LCD_Cursor(uint8_t row, uint8_t column);
 void LCD_CursorShift(uint8_t isDirectionRight);
+void LCD_Clear(void);
 #ifdef __cplusplus
 }
 #endif

@@ -23,9 +23,11 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "lcd.h"
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include "lcd.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -389,7 +391,7 @@ void StartLCDTask(void *argument) {
   for (;;) {
     osMessageQueueGet(lcdQueueHandle, &msg, NULL, osWaitForever);
     LCD_Clear();
-    LCD_WriteString((const char *)msg.data);
+    LCD_Print((const uint8_t *)msg.data, strlen((const char *)msg.data));
   }
   /* USER CODE END StartLCDTask */
 }
