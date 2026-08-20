@@ -4,7 +4,8 @@
 #include <stdint.h>
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 /*
@@ -77,12 +78,14 @@ F = 1: 5 × 10 dots, F = 0: 5 × 8 dots
 #define LCD_DELAY_LONG_MS 2
 #define LCD_DELAY_SHORT_MS 1
 
-void LCD_Init(void);
-void LCD_Print(const uint8_t *data, uint8_t len);
-void LCD_WriteCommand(uint8_t cmd);
-int8_t LCD_Cursor(uint8_t row, uint8_t column);
-void LCD_CursorShift(uint8_t isDirectionRight);
-void LCD_Clear(void);
+    void LCD_Init(void);
+    void LCD_Print(const uint8_t *data, uint8_t len);
+    void LCD_WriteCommand(uint8_t cmd);
+    int8_t LCD_Cursor(uint8_t row, uint8_t column);
+    void LCD_CursorShift(uint8_t isDirectionRight);
+    void LCD_Clear(void);
+    void LCD_HandleCommand(uint8_t *cmd);
+
 #ifdef __cplusplus
 }
 #endif

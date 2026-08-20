@@ -23,7 +23,6 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "lcd.h"
-#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -31,7 +30,8 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-typedef struct {
+typedef struct
+{
   uint8_t event_id;
   uint8_t data[32];
 } messageQueue_t;
@@ -98,8 +98,8 @@ void StartLCDTask(void *argument);
  * @brief  The application entry point.
  * @retval int
  */
-int main(void) {
-
+int main(void)
+{
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
@@ -145,8 +145,7 @@ int main(void) {
 
   /* Create the queue(s) */
   /* creation of lcdQueue */
-  lcdQueueHandle =
-      osMessageQueueNew(1, sizeof(messageQueue_t), &lcdQueue_attributes);
+  lcdQueueHandle = osMessageQueueNew(1, sizeof(LCD_MSG_SIZE), &lcdQueue_attributes);
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
@@ -154,8 +153,7 @@ int main(void) {
 
   /* Create the thread(s) */
   /* creation of LEDBlinkTask */
-  LEDBlinkTaskHandle =
-      osThreadNew(StartLEDBlinkTask, NULL, &LEDBlinkTask_attributes);
+  LEDBlinkTaskHandle = osThreadNew(StartLEDBlinkTask, NULL, &LEDBlinkTask_attributes);
 
   /* creation of USARTTask */
   USARTTaskHandle = osThreadNew(StartUSARTTask, NULL, &USARTTask_attributes);
@@ -178,7 +176,8 @@ int main(void) {
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  while (1) {
+  while (1)
+  {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -190,7 +189,8 @@ int main(void) {
  * @brief System Clock Configuration
  * @retval None
  */
-void SystemClock_Config(void) {
+void SystemClock_Config(void)
+{
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
@@ -203,7 +203,8 @@ void SystemClock_Config(void) {
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI_DIV2;
   RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL16;
-  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
     Error_Handler();
   }
 
@@ -216,7 +217,8 @@ void SystemClock_Config(void) {
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK) {
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+  {
     Error_Handler();
   }
 }
@@ -226,7 +228,8 @@ void SystemClock_Config(void) {
  * @param None
  * @retval None
  */
-static void MX_USART2_UART_Init(void) {
+static void MX_USART2_UART_Init(void)
+{
 
   /* USER CODE BEGIN USART2_Init 0 */
 
@@ -243,7 +246,8 @@ static void MX_USART2_UART_Init(void) {
   huart2.Init.Mode = UART_MODE_TX_RX;
   huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
   huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_UART_Init(&huart2) != HAL_OK) {
+  if (HAL_UART_Init(&huart2) != HAL_OK)
+  {
     Error_Handler();
   }
   /* USER CODE BEGIN USART2_Init 2 */
@@ -256,7 +260,8 @@ static void MX_USART2_UART_Init(void) {
  * @param None
  * @retval None
  */
-static void MX_GPIO_Init(void) {
+static void MX_GPIO_Init(void)
+{
   GPIO_InitTypeDef GPIO_InitStruct = {0};
   /* USER CODE BEGIN MX_GPIO_Init_1 */
 
@@ -273,8 +278,7 @@ static void MX_GPIO_Init(void) {
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB,
-                    lcdRegisterSelect_Pin | lcdReadWrite_Pin | lcdData0_Pin |
-                        lcdData1_Pin | lcdData2_Pin | lcdData3_Pin,
+                    lcdRegisterSelect_Pin | lcdReadWrite_Pin | lcdData0_Pin | lcdData1_Pin | lcdData2_Pin | lcdData3_Pin,
                     GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
@@ -320,8 +324,10 @@ static void MX_GPIO_Init(void) {
 }
 
 /* USER CODE BEGIN 4 */
-void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
-  if (huart->Instance == USART2) {
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
+{
+  if (huart->Instance == USART2)
+  {
     messageQueue_t msg = {0};
     memcpy(msg.data, data, Size);
     msg.event_id = 1;
@@ -332,7 +338,6 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
 
     // Send the received data in the queue to the LCD task for processing
     osMessageQueuePut(lcdQueueHandle, &msg, 0, 0);
-
     // After processing, restart the receive operation
     HAL_UARTEx_ReceiveToIdle_IT(&huart2, data, sizeof(data));
   }
@@ -347,10 +352,12 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
  * @retval None
  */
 /* USER CODE END Header_StartLEDBlinkTask */
-void StartLEDBlinkTask(void *argument) {
+void StartLEDBlinkTask(void *argument)
+{
   /* USER CODE BEGIN 5 */
   /* Infinite loop */
-  for (;;) {
+  for (;;)
+  {
     HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
     osDelay(500);
   }
@@ -364,12 +371,14 @@ void StartLEDBlinkTask(void *argument) {
  * @retval None
  */
 /* USER CODE END Header_StartUSARTTask */
-void StartUSARTTask(void *argument) {
+void StartUSARTTask(void *argument)
+{
   /* USER CODE BEGIN StartUSARTTask */
 
   HAL_UARTEx_ReceiveToIdle_IT(&huart2, data, sizeof(data));
   /* Infinite loop */
-  for (;;) {
+  for (;;)
+  {
     osDelay(1000);
   }
   /* USER CODE END StartUSARTTask */
@@ -382,17 +391,27 @@ void StartUSARTTask(void *argument) {
  * @retval None
  */
 /* USER CODE END Header_StartLCDTask */
-void StartLCDTask(void *argument) {
+void StartLCDTask(void *argument)
+{
   /* USER CODE BEGIN StartLCDTask */
   messageQueue_t msg = {0};
   LCD_Init();
   /* Infinite loop */
-  for (;;) {
+  for (;;)
+  {
     osMessageQueueGet(lcdQueueHandle, &msg, NULL, osWaitForever);
-    LCD_Clear();
-    LCD_Print((const uint8_t *)msg.data, strlen((const char *)msg.data));
+    if (strlen((const char *)msg.data) > 0 && *msg.data == '/')
+    {
+      LCD_HandleCommand(&msg.data[1]);
+    }
+    else
+    {
+      LCD_Clear();
+      LCD_Print((const uint8_t *)msg.data, strlen((const char *)msg.data));
+      // }
+    }
+    /* USER CODE END StartLCDTask */
   }
-  /* USER CODE END StartLCDTask */
 }
 
 /**
@@ -403,11 +422,13 @@ void StartLCDTask(void *argument) {
  * @param  htim : TIM handle
  * @retval None
  */
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
   /* USER CODE BEGIN Callback 0 */
 
   /* USER CODE END Callback 0 */
-  if (htim->Instance == TIM4) {
+  if (htim->Instance == TIM4)
+  {
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
@@ -419,14 +440,17 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
  * @brief  This function is executed in case of error occurrence.
  * @retval None
  */
-void Error_Handler(void) {
+void Error_Handler(void)
+{
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
   __disable_irq();
-  while (1) {
+  while (1)
+  {
   }
   /* USER CODE END Error_Handler_Debug */
 }
+
 #ifdef USE_FULL_ASSERT
 /**
  * @brief  Reports the name of the source file and the source line number
@@ -435,8 +459,9 @@ void Error_Handler(void) {
  * @param  line: assert_param error line source number
  * @retval None
  */
-void assert_failed(uint8_t *file, uint32_t line) {
-  /* USER CODE BEGIN 6 */
+void assert_failed(uint8_t *file, uint32_t line)
+{
+  BEGIN 6 * /
   /* User can add his own implementation to report the file name and line
      number, ex: printf("Wrong parameters value: file %s on line %d\r\n", file,
      line) */

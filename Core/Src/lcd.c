@@ -1,8 +1,10 @@
 #include "lcd.h"
 #include "cmsis_os2.h"
 #include "main.h"
+#include "string.h"
 
-static void LCD_Write4Bits(uint8_t nibble) {
+static void LCD_Write4Bits(uint8_t nibble)
+{
   HAL_GPIO_WritePin(lcdData0_GPIO_Port, lcdData0_Pin,
                     (nibble & 0x01U) ? GPIO_PIN_SET : GPIO_PIN_RESET);
   HAL_GPIO_WritePin(lcdData1_GPIO_Port, lcdData1_Pin,
@@ -20,18 +22,24 @@ static void LCD_Write4Bits(uint8_t nibble) {
   osDelay(LCD_DELAY_SHORT_MS);
 }
 
-void LCD_CursorShift(uint8_t isDirectionRight) {
-  if (isDirectionRight == 1U) {
+void LCD_CursorShift(uint8_t isDirectionRight)
+{
+  if (isDirectionRight == 1U)
+  {
     LCD_WriteCommand(LCD_SHIFT_CURSOR_OR_DISPLAY | LCD_SHIFT_CURSOR |
                      LCD_SHIFT_RIGHT);
-  } else {
+  }
+  else
+  {
     LCD_WriteCommand(LCD_SHIFT_CURSOR_OR_DISPLAY | LCD_SHIFT_CURSOR |
                      LCD_SHIFT_LEFT);
   }
 }
 
-int8_t LCD_Cursor(uint8_t row, uint8_t column) {
-  if (row > 1 || column > 15) {
+int8_t LCD_Cursor(uint8_t row, uint8_t column)
+{
+  if (row > 1 || column > 15)
+  {
     return -1; // Invalid row or column
   }
   uint8_t address = (row == 0) ? LCD_LINE1_ADDR : LCD_LINE2_ADDR;
@@ -40,7 +48,8 @@ int8_t LCD_Cursor(uint8_t row, uint8_t column) {
   return 0; // Success
 }
 
-void LCD_Init(void) {
+void LCD_Init(void)
+{
   HAL_GPIO_WritePin(lcdRegisterSelect_GPIO_Port, lcdRegisterSelect_Pin,
                     GPIO_PIN_RESET);
   HAL_GPIO_WritePin(lcdReadWrite_GPIO_Port, lcdReadWrite_Pin, GPIO_PIN_RESET);
@@ -83,7 +92,8 @@ void LCD_Init(void) {
   // = 0x0C
 }
 
-void LCD_WriteCommand(uint8_t cmd) {
+void LCD_WriteCommand(uint8_t cmd)
+{
   HAL_GPIO_WritePin(lcdRegisterSelect_GPIO_Port, lcdRegisterSelect_Pin,
                     GPIO_PIN_RESET);
   HAL_GPIO_WritePin(lcdReadWrite_GPIO_Port, lcdReadWrite_Pin, GPIO_PIN_RESET);
@@ -92,38 +102,107 @@ void LCD_WriteCommand(uint8_t cmd) {
   LCD_Write4Bits(cmd >> 4);
   LCD_Write4Bits(cmd & 0x0FU);
 
-  if (cmd == LCD_CLEAR_DISPLAY || cmd == LCD_RETURN_HOME) {
+  if (cmd == LCD_CLEAR_DISPLAY || cmd == LCD_RETURN_HOME)
+  {
     osDelay(
         LCD_DELAY_LONG_MS); // 1.52ms delay clear ve return home komutları için
-  } else {
+  }
+  else
+  {
     osDelay(LCD_DELAY_SHORT_MS); // 37us delay diğer komutlar için (daha sonra
                                  // timer ile optimize edilebilir)
   }
 }
 
-void LCD_Print(const uint8_t *data, uint8_t len) {
-  HAL_GPIO_WritePin(lcdRegisterSelect_GPIO_Port, lcdRegisterSelect_Pin,
-                    GPIO_PIN_SET);
+void LCD_Print(const uint8_t *data, uint8_t len)
+{
+  HAL_GPIO_WritePin(lcdRegisterSelect_GPIO_Port, lcdRegisterSelect_Pin, GPIO_PIN_SET);
   HAL_GPIO_WritePin(lcdReadWrite_GPIO_Port, lcdReadWrite_Pin, GPIO_PIN_RESET);
-  osDelay(
-      LCD_DELAY_SHORT_MS); // Ensure RS and RW are stable before sending data
-  for (size_t i = 0; i < len; i++) {
-    if (i == 16) {
+  osDelay(LCD_DELAY_SHORT_MS); // Ensure RS and RW are stable before sending data
+
+  for (size_t i = 0; i < len; i++)
+  {
+    if (i == 16)
+    {
       LCD_Cursor(1, 0); // İkinci satıra geç
-      HAL_GPIO_WritePin(lcdRegisterSelect_GPIO_Port, lcdRegisterSelect_Pin,
-                        GPIO_PIN_SET);
-      HAL_GPIO_WritePin(lcdReadWrite_GPIO_Port, lcdReadWrite_Pin,
-                        GPIO_PIN_RESET); // LCD_Cursor RS ve RW pinlerini
-      // değiştirdiği için tekrar ayarlıyoruz
-      osDelay(LCD_DELAY_SHORT_MS); // Ensure RS and RW are stable before sending
-                                   // data
-    } else if (i == 32) {
+      HAL_GPIO_WritePin(lcdRegisterSelect_GPIO_Port, lcdRegisterSelect_Pin, GPIO_PIN_SET);
+      HAL_GPIO_WritePin(lcdReadWrite_GPIO_Port, lcdReadWrite_Pin, GPIO_PIN_RESET); // LCD_Cursor RS ve RW pinlerini değiştirdiği için tekrar ayarlıyoruz
+      osDelay(LCD_DELAY_SHORT_MS);                                                 // Ensure RS and RW are stable before sending data
+    }
+    else if (i == 32)
+    {
       break; // Stop writing if we reach the end of the second line
     }
     LCD_Write4Bits(data[i] >> 4);
     LCD_Write4Bits(data[i] & 0x0FU);
-    osDelay(LCD_DELAY_SHORT_MS); // Execution time for writing a character is
-                                 // ~43us, using 1ms for simplicity
+    osDelay(LCD_DELAY_SHORT_MS); // Execution time for writing a character is ~43us, using 1ms for simplicity
   }
 }
-void LCD_Clear(void) { LCD_WriteCommand(LCD_CLEAR_DISPLAY); }
+void LCD_Clear(void)
+{
+  LCD_WriteCommand(LCD_CLEAR_DISPLAY);
+}
+
+void LCD_HandleCommand(uint8_t *cmd)
+{
+  if (strncmp((char *)cmd, "clear", 5) == 0)
+  {
+    LCD_Clear();
+  }
+  else if (strncmp((char *)cmd, "home", 4) == 0)
+  {
+    LCD_WriteCommand(LCD_RETURN_HOME);
+  }
+  else if (strncmp((char *)cmd, "display_on", 10) == 0)
+  {
+    LCD_WriteCommand(LCD_DISPLAY_CONTROL | LCD_DISPLAY_ON | LCD_DISPLAY_CURSOR_OFF | LCD_DISPLAY_BLINK_OFF);
+  }
+  else if (strncmp((char *)cmd, "display_off", 11) == 0)
+  {
+    LCD_WriteCommand(LCD_DISPLAY_CONTROL | LCD_DISPLAY_OFF | LCD_DISPLAY_CURSOR_OFF | LCD_DISPLAY_BLINK_OFF);
+  }
+  else if (strncmp((char *)cmd, "cursor_on", 9) == 0)
+  {
+    LCD_WriteCommand(LCD_DISPLAY_CONTROL | LCD_DISPLAY_ON | LCD_DISPLAY_CURSOR_ON | LCD_DISPLAY_BLINK_OFF);
+  }
+  else if (strncmp((char *)cmd, "cursor_off", 10) == 0)
+  {
+    LCD_WriteCommand(LCD_DISPLAY_CONTROL | LCD_DISPLAY_ON | LCD_DISPLAY_CURSOR_OFF | LCD_DISPLAY_BLINK_OFF);
+  }
+  else if (strncmp((char *)cmd, "blink_on", 8) == 0)
+  {
+    LCD_WriteCommand(LCD_DISPLAY_CONTROL | LCD_DISPLAY_ON | LCD_DISPLAY_CURSOR_OFF | LCD_DISPLAY_BLINK_ON);
+  }
+  else if (strncmp((char *)cmd, "blink_off", 9) == 0)
+  {
+    LCD_WriteCommand(LCD_DISPLAY_CONTROL | LCD_DISPLAY_ON | LCD_DISPLAY_CURSOR_OFF | LCD_DISPLAY_BLINK_OFF);
+  }
+  else if (strncmp((char *)cmd, "shift_left", 10) == 0)
+  {
+    LCD_CursorShift(0);
+  }
+  else if (strncmp((char *)cmd, "shift_right", 11) == 0)
+  {
+    LCD_CursorShift(1);
+  }
+  else if (strncmp((char *)cmd, "func_1line", 9) == 0)
+  {
+    LCD_WriteCommand(LCD_FUNC_SET | LCD_FUNC_4BIT | LCD_FUNC_1LINE | LCD_FUNC_5x8);
+  }
+  else if (strncmp((char *)cmd, "func_2line", 10) == 0)
+  {
+    LCD_WriteCommand(LCD_FUNC_SET | LCD_FUNC_4BIT | LCD_FUNC_2LINE | LCD_FUNC_5x8);
+  }
+  else if (strncmp((char *)cmd, "func_5x8", 8) == 0)
+  {
+    LCD_WriteCommand(LCD_FUNC_SET | LCD_FUNC_4BIT | LCD_FUNC_2LINE | LCD_FUNC_5x8);
+  }
+  else if (strncmp((char *)cmd, "func_5x10", 9) == 0)
+  {
+    LCD_WriteCommand(LCD_FUNC_SET | LCD_FUNC_4BIT | LCD_FUNC_2LINE | LCD_FUNC_5x10);
+  }
+  else
+  {
+    return; // geçersiz komut, hiçbir şey yapma
+  }
+}
