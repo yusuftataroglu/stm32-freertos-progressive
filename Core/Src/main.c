@@ -19,22 +19,17 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "cmsis_os.h"
+#include <string.h>
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "lcd.h"
-#include <stdio.h>
-#include <string.h>
+#include "app_tasks.h"
 
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-typedef struct
-{
-  uint8_t event_id;
-  uint8_t data[32];
-} messageQueue_t;
+messageQueue_t msg = {0};
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -404,24 +399,6 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
-{
-  if (huart->Instance == USART2)
-  {
-    messageQueue_t msg = {0};
-    memcpy(msg.data, data, Size);
-    msg.event_id = 1;
-
-    // Debug: Memcpy sonrası
-    printf(">>> After memcpy, msg.data[0..3]: %02X %02X %02X %02X\r\n",
-           msg.data[0], msg.data[1], msg.data[2], msg.data[3]);
-
-    // Send the received data in the queue to the LCD task for processing
-    osMessageQueuePut(lcdQueueHandle, &msg, 0, 0);
-    // After processing, restart the receive operation
-    HAL_UARTEx_ReceiveToIdle_IT(&huart2, data, sizeof(data));
-  }
-}
 
 /* USER CODE END 4 */
 
@@ -435,12 +412,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 void StartLEDBlinkTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
-  /* Infinite loop */
-  for (;;)
-  {
-    HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-    osDelay(500);
-  }
+  App_LEDBlinkTask(argument);
   /* USER CODE END 5 */
 }
 
@@ -454,13 +426,7 @@ void StartLEDBlinkTask(void *argument)
 void StartUSARTTask(void *argument)
 {
   /* USER CODE BEGIN StartUSARTTask */
-
-  HAL_UARTEx_ReceiveToIdle_IT(&huart2, data, sizeof(data));
-  /* Infinite loop */
-  for (;;)
-  {
-    osDelay(1000);
-  }
+  App_USARTTask(argument);
   /* USER CODE END StartUSARTTask */
 }
 
@@ -474,22 +440,7 @@ void StartUSARTTask(void *argument)
 void StartLCDTask(void *argument)
 {
   /* USER CODE BEGIN StartLCDTask */
-  messageQueue_t msg = {0};
-  LCD_Init();
-  /* Infinite loop */
-  for (;;)
-  {
-    osMessageQueueGet(lcdQueueHandle, &msg, NULL, osWaitForever);
-    if (strlen((const char *)msg.data) > 0 && *msg.data == '/')
-    {
-      LCD_HandleCommand(&msg.data[1]);
-    }
-    else
-    {
-      LCD_Clear();
-      LCD_Print((const uint8_t *)msg.data, strlen((const char *)msg.data));
-    }
-  }
+  App_LCDTask(argument);
   /* USER CODE END StartLCDTask */
 }
 
@@ -503,11 +454,7 @@ void StartLCDTask(void *argument)
 void StartIntrnlTempSnsr(void *argument)
 {
   /* USER CODE BEGIN StartIntrnlTempSnsr */
-  /* Infinite loop */
-  for (;;)
-  {
-    osDelay(1);
-  }
+  App_TempSensorTask(argument);
   /* USER CODE END StartIntrnlTempSnsr */
 }
 
