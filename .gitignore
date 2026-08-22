@@ -25,3 +25,6 @@ mx.scratch
 *.swp
 *.swo
 *~
+
+# User specific files
+AGENTS.md

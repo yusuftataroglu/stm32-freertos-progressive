@@ -48,6 +48,8 @@ typedef struct
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+ADC_HandleTypeDef hadc1;
+
 UART_HandleTypeDef huart2;
 
 /* Definitions for LEDBlinkTask */
@@ -71,9 +73,21 @@ const osThreadAttr_t LCDTask_attributes = {
     .stack_size = 128 * 4,
     .priority = (osPriority_t)osPriorityNormal,
 };
+/* Definitions for IntrnlTempSnsr */
+osThreadId_t IntrnlTempSnsrHandle;
+const osThreadAttr_t IntrnlTempSnsr_attributes = {
+    .name = "IntrnlTempSnsr",
+    .stack_size = 128 * 4,
+    .priority = (osPriority_t)osPriorityBelowNormal,
+};
 /* Definitions for lcdQueue */
 osMessageQueueId_t lcdQueueHandle;
-const osMessageQueueAttr_t lcdQueue_attributes = {.name = "lcdQueue"};
+const osMessageQueueAttr_t lcdQueue_attributes = {
+    .name = "lcdQueue"};
+/* Definitions for lcdMutex */
+osMutexId_t lcdMutexHandle;
+const osMutexAttr_t lcdMutex_attributes = {
+    .name = "lcdMutex"};
 /* USER CODE BEGIN PV */
 uint8_t data[32] = {0};
 /* USER CODE END PV */
@@ -82,9 +96,11 @@ uint8_t data[32] = {0};
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
+static void MX_ADC1_Init(void);
 void StartLEDBlinkTask(void *argument);
 void StartUSARTTask(void *argument);
 void StartLCDTask(void *argument);
+void StartIntrnlTempSnsr(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -100,14 +116,14 @@ void StartLCDTask(void *argument);
  */
 int main(void)
 {
+
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
 
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick.
-   */
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
 
   /* USER CODE BEGIN Init */
@@ -124,12 +140,16 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART2_UART_Init();
+  MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
 
   /* Init scheduler */
   osKernelInitialize();
+  /* Create the mutex(es) */
+  /* creation of lcdMutex */
+  lcdMutexHandle = osMutexNew(&lcdMutex_attributes);
 
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
@@ -160,6 +180,9 @@ int main(void)
 
   /* creation of LCDTask */
   LCDTaskHandle = osThreadNew(StartLCDTask, NULL, &LCDTask_attributes);
+
+  /* creation of IntrnlTempSnsr */
+  IntrnlTempSnsrHandle = osThreadNew(StartIntrnlTempSnsr, NULL, &IntrnlTempSnsr_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -193,6 +216,7 @@ void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
   /** Initializes the RCC Oscillators according to the specified parameters
    * in the RCC_OscInitTypeDef structure.
@@ -210,8 +234,7 @@ void SystemClock_Config(void)
 
   /** Initializes the CPU, AHB and APB buses clocks
    */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK |
-                                RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
@@ -221,6 +244,67 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_ADC;
+  PeriphClkInit.AdcClockSelection = RCC_ADCPCLK2_DIV8;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
+
+/**
+ * @brief ADC1 Initialization Function
+ * @param None
+ * @retval None
+ */
+static void MX_ADC1_Init(void)
+{
+
+  /* USER CODE BEGIN ADC1_Init 0 */
+
+  /* USER CODE END ADC1_Init 0 */
+
+  ADC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN ADC1_Init 1 */
+
+  /* USER CODE END ADC1_Init 1 */
+
+  /** Common config
+   */
+  hadc1.Instance = ADC1;
+  hadc1.Init.ScanConvMode = ADC_SCAN_ENABLE;
+  hadc1.Init.ContinuousConvMode = DISABLE;
+  hadc1.Init.DiscontinuousConvMode = DISABLE;
+  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc1.Init.NbrOfConversion = 2;
+  if (HAL_ADC_Init(&hadc1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Regular Channel
+   */
+  sConfig.Channel = ADC_CHANNEL_TEMPSENSOR;
+  sConfig.Rank = ADC_REGULAR_RANK_1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_239CYCLES_5;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Regular Channel
+   */
+  sConfig.Channel = ADC_CHANNEL_VREFINT;
+  sConfig.Rank = ADC_REGULAR_RANK_2;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC1_Init 2 */
+
+  /* USER CODE END ADC1_Init 2 */
 }
 
 /**
@@ -277,9 +361,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB,
-                    lcdRegisterSelect_Pin | lcdReadWrite_Pin | lcdData0_Pin | lcdData1_Pin | lcdData2_Pin | lcdData3_Pin,
-                    GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, lcdRegisterSelect_Pin | lcdReadWrite_Pin | lcdData0_Pin | lcdData1_Pin | lcdData2_Pin | lcdData3_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(lcdEnable_GPIO_Port, lcdEnable_Pin, GPIO_PIN_RESET);
@@ -297,11 +379,9 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : lcdRegisterSelect_Pin lcdReadWrite_Pin lcdData0_Pin
-     lcdData1_Pin lcdData2_Pin lcdData3_Pin */
-  GPIO_InitStruct.Pin = lcdRegisterSelect_Pin | lcdReadWrite_Pin |
-                        lcdData0_Pin | lcdData1_Pin | lcdData2_Pin |
-                        lcdData3_Pin;
+  /*Configure GPIO pins : lcdRegisterSelect_Pin lcdReadWrite_Pin lcdData0_Pin lcdData1_Pin
+                           lcdData2_Pin lcdData3_Pin */
+  GPIO_InitStruct.Pin = lcdRegisterSelect_Pin | lcdReadWrite_Pin | lcdData0_Pin | lcdData1_Pin | lcdData2_Pin | lcdData3_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -408,10 +488,27 @@ void StartLCDTask(void *argument)
     {
       LCD_Clear();
       LCD_Print((const uint8_t *)msg.data, strlen((const char *)msg.data));
-      // }
     }
-    /* USER CODE END StartLCDTask */
   }
+  /* USER CODE END StartLCDTask */
+}
+
+/* USER CODE BEGIN Header_StartIntrnlTempSnsr */
+/**
+ * @brief Function implementing the IntrnlTempSnsr thread.
+ * @param argument: Not used
+ * @retval None
+ */
+/* USER CODE END Header_StartIntrnlTempSnsr */
+void StartIntrnlTempSnsr(void *argument)
+{
+  /* USER CODE BEGIN StartIntrnlTempSnsr */
+  /* Infinite loop */
+  for (;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END StartIntrnlTempSnsr */
 }
 
 /**
@@ -450,7 +547,6 @@ void Error_Handler(void)
   }
   /* USER CODE END Error_Handler_Debug */
 }
-
 #ifdef USE_FULL_ASSERT
 /**
  * @brief  Reports the name of the source file and the source line number
@@ -461,10 +557,9 @@ void Error_Handler(void)
  */
 void assert_failed(uint8_t *file, uint32_t line)
 {
-  BEGIN 6 * /
-  /* User can add his own implementation to report the file name and line
-     number, ex: printf("Wrong parameters value: file %s on line %d\r\n", file,
-     line) */
+  /* USER CODE BEGIN 6 */
+  /* User can add his own implementation to report the file name and line number,
+     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
