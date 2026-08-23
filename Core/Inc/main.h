@@ -30,8 +30,8 @@ extern "C"
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f1xx_hal.h"
 
-    /* Private includes ----------------------------------------------------------*/
-    /* USER CODE BEGIN Includes */
+/* Private includes ----------------------------------------------------------*/
+/* USER CODE BEGIN Includes */
 #include "cmsis_os2.h"
     /* USER CODE END Includes */
 
@@ -99,8 +99,10 @@ extern "C"
     extern ADC_HandleTypeDef hadc1;
     extern osMessageQueueId_t lcdQueueHandle;
     extern osMutexId_t lcdMutexHandle;
-    extern uint8_t data[32];
+    extern uint8_t uartData[32];
+    extern uint16_t adcData[2];
     extern messageQueue_t msg;
+    extern DMA_HandleTypeDef hdma_adc1;
     /* USER CODE END Private defines */
 
 #ifdef __cplusplus

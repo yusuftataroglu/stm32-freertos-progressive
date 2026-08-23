@@ -7,7 +7,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
     if (huart->Instance == USART2)
     {
         messageQueue_t msg = {0};
-        memcpy(msg.data, data, Size);
+        memcpy(msg.data, uartData, Size);
         msg.event_id = 1;
 
         // Debug: Memcpy sonrası
@@ -17,6 +17,6 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
         // Send the received data in the queue to the LCD task for processing
         osMessageQueuePut(lcdQueueHandle, &msg, 0, 0);
         // After processing, restart the receive operation
-        HAL_UARTEx_ReceiveToIdle_IT(&huart2, data, sizeof(data));
+        HAL_UARTEx_ReceiveToIdle_IT(&huart2, uartData, sizeof(uartData));
     }
 }
