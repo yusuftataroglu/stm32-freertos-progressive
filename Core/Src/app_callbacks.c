@@ -1,6 +1,7 @@
 #include "main.h"
 #include <stdio.h>
 #include <string.h>
+#include "cmsis_os2.h"
 
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
@@ -18,5 +19,13 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
         osMessageQueuePut(lcdQueueHandle, &msg, 0, 0);
         // After processing, restart the receive operation
         HAL_UARTEx_ReceiveToIdle_IT(&huart2, uartData, sizeof(uartData));
+    }
+}
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+    if (GPIO_Pin == B1_Pin)
+    {
+        osThreadFlagsSet(EmergencyTaskHandle, 0x01); // Bit0 set — "ACİL!"
     }
 }

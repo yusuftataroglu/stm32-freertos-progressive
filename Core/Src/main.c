@@ -50,39 +50,48 @@ UART_HandleTypeDef huart2;
 /* Definitions for LEDBlinkTask */
 osThreadId_t LEDBlinkTaskHandle;
 const osThreadAttr_t LEDBlinkTask_attributes = {
-    .name = "LEDBlinkTask",
-    .stack_size = 128 * 4,
-    .priority = (osPriority_t)osPriorityNormal,
+  .name = "LEDBlinkTask",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for USARTTask */
 osThreadId_t USARTTaskHandle;
 const osThreadAttr_t USARTTask_attributes = {
-    .name = "USARTTask",
-    .stack_size = 128 * 4,
-    .priority = (osPriority_t)osPriorityNormal,
+  .name = "USARTTask",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for LCDTask */
 osThreadId_t LCDTaskHandle;
 const osThreadAttr_t LCDTask_attributes = {
-    .name = "LCDTask",
-    .stack_size = 128 * 4,
-    .priority = (osPriority_t)osPriorityNormal,
+  .name = "LCDTask",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for IntrnlTempSnsr */
 osThreadId_t IntrnlTempSnsrHandle;
 const osThreadAttr_t IntrnlTempSnsr_attributes = {
-    .name = "IntrnlTempSnsr",
-    .stack_size = 128 * 4,
-    .priority = (osPriority_t)osPriorityBelowNormal,
+  .name = "IntrnlTempSnsr",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityBelowNormal,
+};
+/* Definitions for EmergencyTask */
+osThreadId_t EmergencyTaskHandle;
+const osThreadAttr_t EmergencyTask_attributes = {
+  .name = "EmergencyTask",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityHigh,
 };
 /* Definitions for lcdQueue */
 osMessageQueueId_t lcdQueueHandle;
 const osMessageQueueAttr_t lcdQueue_attributes = {
-    .name = "lcdQueue"};
+  .name = "lcdQueue"
+};
 /* Definitions for lcdMutex */
 osMutexId_t lcdMutexHandle;
 const osMutexAttr_t lcdMutex_attributes = {
-    .name = "lcdMutex"};
+  .name = "lcdMutex"
+};
 /* USER CODE BEGIN PV */
 uint8_t uartData[32] = {0};
 uint16_t adcData[2] = {0};
@@ -98,6 +107,7 @@ void StartLEDBlinkTask(void *argument);
 void StartUSARTTask(void *argument);
 void StartLCDTask(void *argument);
 void StartIntrnlTempSnsr(void *argument);
+void StartEmergencyTask(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -108,9 +118,9 @@ void StartIntrnlTempSnsr(void *argument);
 /* USER CODE END 0 */
 
 /**
- * @brief  The application entry point.
- * @retval int
- */
+  * @brief  The application entry point.
+  * @retval int
+  */
 int main(void)
 {
 
@@ -163,7 +173,7 @@ int main(void)
 
   /* Create the queue(s) */
   /* creation of lcdQueue */
-  lcdQueueHandle = osMessageQueueNew(1, sizeof(LCD_MSG_SIZE), &lcdQueue_attributes);
+  lcdQueueHandle = osMessageQueueNew (1, sizeof(LCD_MSG_SIZE), &lcdQueue_attributes);
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
@@ -181,6 +191,9 @@ int main(void)
 
   /* creation of IntrnlTempSnsr */
   IntrnlTempSnsrHandle = osThreadNew(StartIntrnlTempSnsr, NULL, &IntrnlTempSnsr_attributes);
+
+  /* creation of EmergencyTask */
+  EmergencyTaskHandle = osThreadNew(StartEmergencyTask, NULL, &EmergencyTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -207,9 +220,9 @@ int main(void)
 }
 
 /**
- * @brief System Clock Configuration
- * @retval None
- */
+  * @brief System Clock Configuration
+  * @retval None
+  */
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
@@ -217,8 +230,8 @@ void SystemClock_Config(void)
   RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
   /** Initializes the RCC Oscillators according to the specified parameters
-   * in the RCC_OscInitTypeDef structure.
-   */
+  * in the RCC_OscInitTypeDef structure.
+  */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
@@ -231,8 +244,9 @@ void SystemClock_Config(void)
   }
 
   /** Initializes the CPU, AHB and APB buses clocks
-   */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
+  */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
@@ -251,10 +265,10 @@ void SystemClock_Config(void)
 }
 
 /**
- * @brief ADC1 Initialization Function
- * @param None
- * @retval None
- */
+  * @brief ADC1 Initialization Function
+  * @param None
+  * @retval None
+  */
 static void MX_ADC1_Init(void)
 {
 
@@ -269,7 +283,7 @@ static void MX_ADC1_Init(void)
   /* USER CODE END ADC1_Init 1 */
 
   /** Common config
-   */
+  */
   hadc1.Instance = ADC1;
   hadc1.Init.ScanConvMode = ADC_SCAN_ENABLE;
   hadc1.Init.ContinuousConvMode = ENABLE;
@@ -283,7 +297,7 @@ static void MX_ADC1_Init(void)
   }
 
   /** Configure Regular Channel
-   */
+  */
   sConfig.Channel = ADC_CHANNEL_TEMPSENSOR;
   sConfig.Rank = ADC_REGULAR_RANK_1;
   sConfig.SamplingTime = ADC_SAMPLETIME_55CYCLES_5;
@@ -293,7 +307,7 @@ static void MX_ADC1_Init(void)
   }
 
   /** Configure Regular Channel
-   */
+  */
   sConfig.Channel = ADC_CHANNEL_VREFINT;
   sConfig.Rank = ADC_REGULAR_RANK_2;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
@@ -303,13 +317,14 @@ static void MX_ADC1_Init(void)
   /* USER CODE BEGIN ADC1_Init 2 */
 
   /* USER CODE END ADC1_Init 2 */
+
 }
 
 /**
- * @brief USART2 Initialization Function
- * @param None
- * @retval None
- */
+  * @brief USART2 Initialization Function
+  * @param None
+  * @retval None
+  */
 static void MX_USART2_UART_Init(void)
 {
 
@@ -335,11 +350,12 @@ static void MX_USART2_UART_Init(void)
   /* USER CODE BEGIN USART2_Init 2 */
 
   /* USER CODE END USART2_Init 2 */
+
 }
 
 /**
- * Enable DMA controller clock
- */
+  * Enable DMA controller clock
+  */
 static void MX_DMA_Init(void)
 {
 
@@ -350,13 +366,14 @@ static void MX_DMA_Init(void)
   /* DMA1_Channel1_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
+
 }
 
 /**
- * @brief GPIO Initialization Function
- * @param None
- * @retval None
- */
+  * @brief GPIO Initialization Function
+  * @param None
+  * @retval None
+  */
 static void MX_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -374,7 +391,8 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, lcdRegisterSelect_Pin | lcdReadWrite_Pin | lcdData0_Pin | lcdData1_Pin | lcdData2_Pin | lcdData3_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, lcdRegisterSelect_Pin|lcdReadWrite_Pin|lcdData0_Pin|lcdData1_Pin
+                          |lcdData2_Pin|lcdData3_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(lcdEnable_GPIO_Port, lcdEnable_Pin, GPIO_PIN_RESET);
@@ -382,7 +400,7 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin : B1_Pin */
   GPIO_InitStruct.Pin = B1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : LD2_Pin */
@@ -394,7 +412,8 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pins : lcdRegisterSelect_Pin lcdReadWrite_Pin lcdData0_Pin lcdData1_Pin
                            lcdData2_Pin lcdData3_Pin */
-  GPIO_InitStruct.Pin = lcdRegisterSelect_Pin | lcdReadWrite_Pin | lcdData0_Pin | lcdData1_Pin | lcdData2_Pin | lcdData3_Pin;
+  GPIO_InitStruct.Pin = lcdRegisterSelect_Pin|lcdReadWrite_Pin|lcdData0_Pin|lcdData1_Pin
+                          |lcdData2_Pin|lcdData3_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -476,14 +495,28 @@ void StartIntrnlTempSnsr(void *argument)
   /* USER CODE END StartIntrnlTempSnsr */
 }
 
+/* USER CODE BEGIN Header_StartEmergencyTask */
 /**
- * @brief  Period elapsed callback in non blocking mode
- * @note   This function is called  when TIM4 interrupt took place, inside
- * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
- * a global variable "uwTick" used as application time base.
- * @param  htim : TIM handle
+ * @brief Function implementing the EmergencyTask thread.
+ * @param argument: Not used
  * @retval None
  */
+/* USER CODE END Header_StartEmergencyTask */
+void StartEmergencyTask(void *argument)
+{
+  /* USER CODE BEGIN StartEmergencyTask */
+  App_EmergencyTask(argument);
+  /* USER CODE END StartEmergencyTask */
+}
+
+/**
+  * @brief  Period elapsed callback in non blocking mode
+  * @note   This function is called  when TIM4 interrupt took place, inside
+  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
+  * a global variable "uwTick" used as application time base.
+  * @param  htim : TIM handle
+  * @retval None
+  */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   /* USER CODE BEGIN Callback 0 */
@@ -499,9 +532,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 }
 
 /**
- * @brief  This function is executed in case of error occurrence.
- * @retval None
- */
+  * @brief  This function is executed in case of error occurrence.
+  * @retval None
+  */
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
@@ -514,12 +547,12 @@ void Error_Handler(void)
 }
 #ifdef USE_FULL_ASSERT
 /**
- * @brief  Reports the name of the source file and the source line number
- *         where the assert_param error has occurred.
- * @param  file: pointer to the source file name
- * @param  line: assert_param error line source number
- * @retval None
- */
+  * @brief  Reports the name of the source file and the source line number
+  *         where the assert_param error has occurred.
+  * @param  file: pointer to the source file name
+  * @param  line: assert_param error line source number
+  * @retval None
+  */
 void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */

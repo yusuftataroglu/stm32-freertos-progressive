@@ -86,6 +86,20 @@ void App_TempSensorTask(void *argument)
             osMutexRelease(lcdMutexHandle);
         }
 
-        osDelay(250);
+        osDelay(2000);
+    }
+}
+
+void App_EmergencyTask(void *argument)
+{
+    const uint8_t emergencyMsg[] = "ACIL!";
+    for (;;)
+    {
+        osThreadFlagsWait(0x01 /* Bit 0 = ACİL */, osFlagsWaitAny, osWaitForever);
+        osMutexAcquire(lcdMutexHandle, osWaitForever);
+        LCD_Clear();
+        LCD_Cursor(1, 5);
+        LCD_Print(emergencyMsg, strlen((const char *)emergencyMsg));
+        osMutexRelease(lcdMutexHandle);
     }
 }

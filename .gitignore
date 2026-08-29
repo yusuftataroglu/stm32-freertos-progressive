@@ -2,6 +2,18 @@
 build/
 Debug/
 Release/
+*.o
+*.a
+*.so
+*.elf
+*.axf
+*.hex
+*.bin
+*.map
+*.d
+*.lst
+compile_commands.json
+CMakeUserPresets.json
 
 # CubeMX temporary files
 mx.scratch
@@ -10,15 +22,8 @@ mx.scratch
 .vscode/
 .settings/
 .clangd
-
-# Build artifacts and temporary files
-*.o
-*.a
-*.so
-*.elf
-*.axf
-*.hex
-*.bin
+.cproject
+.project
 
 # Editor and system files
 .DS_Store
@@ -28,3 +33,15 @@ mx.scratch
 
 # User specific files
 AGENTS.md
+
+# AI assistant files
+.github/skills/
+.github/copilot-instructions.md
+.github/agents/
+.github/prompts/
+.github/instructions/
+.claude/
+.cursor/
+.windsurf/
+.copilot/
+memories/
