@@ -1,137 +1,61 @@
 # STM32 FreeRTOS Progressive
 
-STM32F103RBT6 kartı üzerinde FreeRTOS ve gömülü sistemler kavramlarını gerçek
-uygulamalarla öğrenmek için geliştirilen kademeli bir projedir. Proje STM32CubeMX,
-CMake, CMSIS-RTOS v2 ve FreeRTOS kullanır.
+> **STM32F103RBT6 (Blue Pill)** üzerinde **FreeRTOS** ve gömülü sistem kavramlarını **gerçek uygulamalarla kademeli öğrenme** projesi.
 
-## Mevcut Durum
+**Tech Stack:** STM32CubeMX • CMake + Ninja • CMSIS-RTOS v2 • FreeRTOS v10.3.1 • arm-none-eabi-gcc
 
-Şu ana kadar tamamlanan uygulamalar:
+---
 
-- CubeMX ile temel proje iskeleti oluşturuldu.
-- FreeRTOS, CMSIS-RTOS v2 arayüzü ile etkinleştirildi.
-- HAL timebase kaynağı SysTick yerine TIM4 olarak yapılandırıldı.
-- LEDBlinkTask oluşturuldu ve LED, osDelay(500) kullanılarak 500 ms aralıkla toggle ediliyor.
-- USART2, asenkron 115200 8-N-1 modunda yapılandırıldı.
-- printf() çıktısı USART2 üzerinden terminale yönlendirildi.
-- HAL_UARTEx_ReceiveToIdle_IT() ile değişken uzunlukta UART alımı eklendi.
-- UART callback ile LCD task arasında CMSIS-RTOS message queue kullanıldı.
-- HD44780 uyumlu 16x2 LCD için 4-bit GPIO sürücüsü yazıldı.
-- UART üzerinden gelen metin LCD task tarafından LCD ekrana yazdırılıyor.
-- LCD komutları terminal üzerinden gönderilebilir hale getirildi.
+## Öğrenilen RTOS Kavramları
 
-## Donanım
+### Temel Task Yönetimi
+- [x] **Task oluşturma & lifecycle** - `osThreadNew`, `osDelay`
+- [x] **Task öncelikleri & preemption** - BelowNormal → Normal → High
+- [x] **Stack sizing** - 512B/task (128 words), heap yönetimi
 
-### USART2
+### Senkronizasyon & İletişim
+- [x] **Mutex + Priority Inheritance** - LCD paylaşımı (3 task güvenli erişim)
+- [x] **Message Queue** - UART ISR → LCD Task (veri taşıma, 32B)
+- [x] **Task Notification** - Buton EXTI ISR → Emergency Task (hafif sinyal)
 
-| STM32 pini | Görev |
-|---|---|
-| PA2 | USART2 TX |
-| PA3 | USART2 RX |
+### Interrupt & RTOS Entegrasyonu
+- [x] **ISR-safe API** - `osMessageQueuePut(...,0,0)`, `osThreadFlagsSet`
+- [x] **NVIC Priority yönetimi** - `configMAX_SYSCALL_INTERRUPT_PRIORITY = 5`
+- [x] **HAL timebase** - TIM4 (SysTick FreeRTOS'e ayrıldı)
 
-Terminal ayarları:
+### Donanım & Periferal
+- [x] **UART Idle Interrupt** - `HAL_UARTEx_ReceiveToIdle_IT` (değişken uzunluk)
+- [x] **ADC + DMA** - Dahili sıcaklık sensörü + VREFINT (continuous)
+- [x] **EXTI Interrupt** - PC13 buton (falling edge, pull-down)
+- [x] **HD44780 LCD 4-bit** - GPIO sürücü, komut parsing
 
-- Baud rate: 115200
-- Data bits: 8
-- Parity: None
-- Stop bits: 1
-- Flow control: None
-
-### HD44780 16x2 LCD
-
-LCD, 4-bit modda kullanılır. RW pini yazma işlemleri için düşük seviyede tutulur.
-
-| LCD sinyali | STM32 pini |
-|---|---|
-| RS | PB10 |
-| RW | PB11 |
-| D4 | PB12 |
-| D5 | PB13 |
-| D6 | PB14 |
-| D7 | PB15 |
-| E | PC6 |
-
-LCD sürücüsünün genel API'si (Core/Inc/lcd.h), uygulaması ise
-(Core/Src/lcd.c) içindedir.
-
-## Yazılım Mimarisi
-```
-text
-Terminal
-	|
-	v
-USART2 RX interrupt
-	|
-	v
-HAL_UARTEx_RxEventCallback
-	|
-	v
-lcdQueue
-	|
-	v
-StartLCDTask
-	|
-	v
-HD44780 LCD
-```
-
-- UART callback'i interrupt context içinde çalışır ve queue'ya bloklamadan mesaj bırakır.
-- LCD task queue'dan bloklayarak mesaj bekler.
-- LCD'ye ait zamanlama ve GPIO işlemleri task context içinde gerçekleştirilir.
-- UART mesajları en fazla 32 byte olacak şekilde buffer'lanır.
-- LCD çıktısı 16x2 ekran kapasitesiyle sınırlıdır.
-
-## Desteklenen LCD Komutları
-
-Terminalden aşağıdaki komutlar gönderilebilir:
-```
-text
-clear
-home
-display_on
-display_off
-cursor_on
-cursor_off
-blink_on
-blink_off
-shift_left
-shift_right
-func_1line
-func_2line
-func_5x8
-func_5x10
-```
-
-Komut dışındaki metinler LCD'ye normal karakter verisi olarak yazdırılır.
-
-## Derleme
-
-Proje kök dizininde:
-
-text
-cmake --preset Debug
-cmake --build --preset Debug
-
-
-Release derlemesi için:
-
-text
-cmake --preset Release
-cmake --build --preset Release
-
-
-CubeMX tarafından yeniden üretilebilen CMake dosyası
-cmake/stm32cubemx/CMakeLists.txt içindedir. Kullanıcıya ait lcd.c gibi
-dosyalar kalıcı CMake girişi olan kök (CMakeLists.txt) içinde
-kaynak listesine eklenmelidir.
+---
 
 ## Öğrenme Yol Haritası
 
-Bir sonraki aşamalarda şu konuların eklenmesi planlanmaktadır:
+| Aşama | Kavram | Uygulama | Durum |
+|-------|--------|----------|-------|
+| 1 | **Task Basics** | LED blink, task create/delay | ✅ |
+| 2 | **Queue** | UART → LCD mesaj iletimi | ✅ |
+| 3 | **Mutex** | LCD çoklu task paylaşımı | ✅ |
+| 4 | **Task Notification** | Buton → Emergency "ACIL!" | ✅ |
+| 5 | **Semaphore** | Binary/Counting - Queue farkı | ⏳ |
+| 6 | **Software Timer** | LED blink timer callback | ⏳ |
+| 7 | **Stack Analysis** | `uxTaskGetStackHighWaterMark` | ⏳ |
+| 8 | **Event Flags** | Çoklu koşul bekleme (ADC+BTN) | ⏳ |
+| 9 | **Runtime Stats** | `vTaskList`, CPU% per task | ⏳ |
+| 10 | **Dynamic Tasks** | Runtime create/delete | ⏳ |
 
-- UART mesaj protokolünün ve komut ayrıştırıcısının iyileştirilmesi
-- Queue taşması ve hata durumlarının ele alınması
-- Task stack kullanımının uxTaskGetStackHighWaterMark() ile ölçülmesi
-- UART RX buffer ve mesaj uzunluğu yönetiminin daha sağlam hale getirilmesi
-- FreeRTOS senkronizasyon araçları: semaphore, mutex ve event flags
-- Yeni donanımların CubeMX üzerinden eklenmesi ve uygulama task'larıyla birleştirilmesi
+---
+
+## Proje Yapısı (Özet)
+
+```
+Core/
+  Src/
+    app_tasks.c      # Tüm task implementasyonları
+    app_callbacks.c  # ISR callbacks (UART, EXTI)
+    lcd.c            # HD44780 4-bit driver
+  Inc/
+    FreeRTOSConfig.h # RTOS konfigürasyonu
+```
