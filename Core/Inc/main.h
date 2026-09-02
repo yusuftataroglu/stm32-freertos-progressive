@@ -86,11 +86,14 @@ void Error_Handler(void);
 #define SWO_Pin GPIO_PIN_3
 #define SWO_GPIO_Port GPIOB
 
+#define LCD_MSG_DATA_SIZE 32U
+
 /* USER CODE BEGIN Private defines */
     typedef struct
     {
         uint8_t event_id;
-        uint8_t data[32];
+        uint8_t length;
+        uint8_t data[LCD_MSG_DATA_SIZE];
     } messageQueue_t;
     extern UART_HandleTypeDef huart1;
     extern ADC_HandleTypeDef hadc1;
