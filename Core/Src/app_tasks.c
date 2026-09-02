@@ -6,10 +6,9 @@
 #include "app_tasks.h"
 #include "lcd.h"
 #include "cmsis_os2.h"
-
 void App_USARTTask(void *argument)
 {
-    HAL_UARTEx_ReceiveToIdle_IT(&huart2, uartData, sizeof(uartData));
+    HAL_UARTEx_ReceiveToIdle_IT(&huart1, uartData, sizeof(uartData));
     /* Infinite loop */
     for (;;)
     {

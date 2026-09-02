@@ -63,8 +63,6 @@ void Error_Handler(void);
 #define B1_EXTI_IRQn EXTI15_10_IRQn
 #define USART_TX_Pin GPIO_PIN_2
 #define USART_TX_GPIO_Port GPIOA
-#define USART_RX_Pin GPIO_PIN_3
-#define USART_RX_GPIO_Port GPIOA
 #define LD2_Pin GPIO_PIN_5
 #define LD2_GPIO_Port GPIOA
 #define lcdRegisterSelect_Pin GPIO_PIN_10
@@ -94,7 +92,7 @@ void Error_Handler(void);
         uint8_t event_id;
         uint8_t data[32];
     } messageQueue_t;
-    extern UART_HandleTypeDef huart2;
+    extern UART_HandleTypeDef huart1;
     extern ADC_HandleTypeDef hadc1;
     extern osMessageQueueId_t lcdQueueHandle;
     extern osMutexId_t lcdMutexHandle;

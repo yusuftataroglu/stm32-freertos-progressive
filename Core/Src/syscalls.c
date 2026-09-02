@@ -43,106 +43,125 @@ void initialise_monitor_handles() {}
 
 int _getpid(void) { return 1; }
 
-int _kill(int pid, int sig) {
+int _kill(int pid, int sig)
+{
   (void)pid;
   (void)sig;
   errno = EINVAL;
   return -1;
 }
 
-void _exit(int status) {
+void _exit(int status)
+{
   _kill(status, -1);
-  while (1) {
+  while (1)
+  {
   } /* Make sure we hang here */
 }
 
-__attribute__((weak)) int _read(int file, char *ptr, int len) {
+__attribute__((weak)) int _read(int file, char *ptr, int len)
+{
   (void)file;
   int DataIdx;
 
-  for (DataIdx = 0; DataIdx < len; DataIdx++) {
+  for (DataIdx = 0; DataIdx < len; DataIdx++)
+  {
     *ptr++ = __io_getchar();
   }
 
   return len;
 }
 
-__attribute__((weak)) int _write(int file, char *ptr, int len) {
+__attribute__((weak)) int _write(int file, char *ptr, int len)
+{
   (void)file;
   int DataIdx;
 
-  for (DataIdx = 0; DataIdx < len; DataIdx++) {
+  for (DataIdx = 0; DataIdx < len; DataIdx++)
+  {
     __io_putchar(*ptr++);
   }
   return len;
 }
 
-int _close(int file) {
+int _close(int file)
+{
   (void)file;
   return -1;
 }
 
-int _fstat(int file, struct stat *st) {
+int _fstat(int file, struct stat *st)
+{
   (void)file;
   st->st_mode = S_IFCHR;
   return 0;
 }
 
-int _isatty(int file) {
+int _isatty(int file)
+{
   (void)file;
   return 1;
 }
 
-int _lseek(int file, int ptr, int dir) {
+int _lseek(int file, int ptr, int dir)
+{
   (void)file;
   (void)ptr;
   (void)dir;
   return 0;
 }
 
-int _open(char *path, int flags, ...) {
+int _open(char *path, int flags, ...)
+{
   (void)path;
   (void)flags;
   /* Pretend like we always fail */
   return -1;
 }
 
-int _wait(int *status) {
+int _wait(int *status)
+{
   (void)status;
   errno = ECHILD;
   return -1;
 }
 
-int _unlink(char *name) {
+int _unlink(char *name)
+{
   (void)name;
   errno = ENOENT;
   return -1;
 }
 
-clock_t _times(struct tms *buf) {
+clock_t _times(struct tms *buf)
+{
   (void)buf;
   return -1;
 }
 
-int _stat(const char *file, struct stat *st) {
+int _stat(const char *file, struct stat *st)
+{
   (void)file;
   st->st_mode = S_IFCHR;
   return 0;
 }
 
-int _link(char *old, char *new) {
+int _link(char *old, char *new)
+{
   (void)old;
   (void)new;
   errno = EMLINK;
   return -1;
 }
 
-int _fork(void) {
+int _fork(void)
+{
   errno = EAGAIN;
   return -1;
 }
 
-int _execve(char *name, char **argv, char **env) {
+int _execve(char *name, char **argv, char **env)
+{
   (void)name;
   (void)argv;
   (void)env;
@@ -160,7 +179,8 @@ int _execve(char *name, char **argv, char **env) {
  * @param file FILE stream pointer (ignored).
  * @retval int The character written.
  */
-static int starm_putc(char c, FILE *file) {
+static int starm_putc(char c, FILE *file)
+{
   (void)file;
   __io_putchar(c);
   return c;
@@ -172,7 +192,8 @@ static int starm_putc(char c, FILE *file) {
  * @param file FILE stream pointer (ignored).
  * @retval int The character read, cast to an unsigned char then int.
  */
-static int starm_getc(FILE *file) {
+static int starm_getc(FILE *file)
+{
   unsigned char c;
   (void)file;
   c = __io_getchar();
@@ -222,11 +243,12 @@ __strong_reference(_getpid, getpid);
  */
 extern UART_HandleTypeDef huart2;
 
-int __io_putchar(int ch) {
+int __io_putchar(int ch)
+{
   uint8_t byte = (uint8_t)ch;
   // Send single byte via UART with 1000ms timeout
   // In interrupt mode, this would be non-blocking, but for simplicity we use
   // blocking
-  HAL_UART_Transmit(&huart2, &byte, 1, 1000);
+  HAL_UART_Transmit(&huart1, &byte, 1, 1000);
   return ch;
 }
