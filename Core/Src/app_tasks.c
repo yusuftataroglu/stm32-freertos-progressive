@@ -117,13 +117,17 @@ void App_USARTTask(void *argument)
 
 void App_LEDBlinkTask(void *argument)
 {
-    uint32_t nextWakeTime = osKernelGetTickCount();
+    (void)argument;
 
     for (;;)
     {
-        HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-        nextWakeTime += 500U;
-        osDelayUntil(nextWakeTime);
+        uint32_t flags = osThreadFlagsWait(APP_LED_TIMER_FLAG, osFlagsWaitAny,
+                                           osWaitForever);
+
+        if ((flags & APP_LED_TIMER_FLAG) != 0U)
+        {
+            HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+        }
     }
 }
 
@@ -202,7 +206,7 @@ void App_TempSensorTask(void *argument)
 
         if (osMutexAcquire(lcdMutexHandle, osWaitForever) == osOK)
         {
-            LCD_Cursor(1, 5);
+            LCD_Cursor(1, 10);
             LCD_Print((uint8_t *)temp_str, (uint8_t)len);
             osMutexRelease(lcdMutexHandle);
         }

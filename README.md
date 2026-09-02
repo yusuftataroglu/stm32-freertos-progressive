@@ -17,6 +17,7 @@
 - [x] **Mutex + Priority Inheritance** - LCD paylaşımı (3 task güvenli erişim)
 - [x] **Message Queue** - UART ISR → LCD Task (veri taşıma, 32B)
 - [x] **Task Notification** - Buton EXTI ISR → Emergency Task (hafif sinyal)
+- [x] **Software Timer** - CubeMX periodic timer → LED task flag
 
 ### Interrupt & RTOS Entegrasyonu
 - [x] **ISR-safe API** - `osMessageQueuePut(...,0,0)`, `osThreadFlagsSet`
@@ -40,7 +41,7 @@
 | 3 | **Mutex** | LCD çoklu task paylaşımı | ✅ |
 | 4 | **Task Notification** | Buton → Emergency "ACIL!" | ✅ |
 | 5 | **Semaphore** | Binary/Counting - Queue farkı | ⏳ |
-| 6 | **Software Timer** | LED blink timer callback | ⏳ |
+| 6 | **Software Timer** | CubeMX periodic timer → LED task flag | ✅ |
 | 7 | **Stack Analysis** | `uxTaskGetStackHighWaterMark` | ⏳ |
 | 8 | **Event Flags** | Çoklu koşul bekleme (ADC+BTN) | ⏳ |
 | 9 | **Runtime Stats** | `vTaskList`, CPU% per task | ⏳ |
@@ -54,8 +55,9 @@
 Core/
   Src/
     app_tasks.c      # Tüm task implementasyonları
-    app_callbacks.c  # ISR callbacks (UART, EXTI)
+    app_callbacks.c  # ISR ve timer callback implementasyonları
+    app_state.c      # Uygulama state ve alarm mantığı
     lcd.c            # HD44780 4-bit driver
   Inc/
+    app_state.h      # Uygulama state arayüzü
     FreeRTOSConfig.h # RTOS konfigürasyonu
-```

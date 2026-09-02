@@ -3,6 +3,12 @@
 #include <string.h>
 #include "cmsis_os2.h"
 
+void App_LedTimerCallbackImpl(void *argument)
+{
+    (void)argument;
+    (void)osThreadFlagsSet(LEDBlinkTaskHandle, APP_LED_TIMER_FLAG);
+}
+
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
     if (huart != &huart1)

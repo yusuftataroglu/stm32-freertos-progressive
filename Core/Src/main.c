@@ -85,6 +85,10 @@ const osThreadAttr_t EmergencyTask_attributes = {
 osMessageQueueId_t lcdQueueHandle;
 const osMessageQueueAttr_t lcdQueue_attributes = {
     .name = "lcdQueue"};
+/* Definitions for LedHeartbeatTimer */
+osTimerId_t LedHeartbeatTimerHandle;
+const osTimerAttr_t LedHeartbeatTimer_attributes = {
+    .name = "LedHeartbeatTimer"};
 /* Definitions for lcdMutex */
 osMutexId_t lcdMutexHandle;
 const osMutexAttr_t lcdMutex_attributes = {
@@ -105,6 +109,7 @@ void StartUSARTTask(void *argument);
 void StartLCDTask(void *argument);
 void StartIntrnlTempSnsr(void *argument);
 void StartEmergencyTask(void *argument);
+void App_LedTimerCallback(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -164,8 +169,15 @@ int main(void)
   /* add semaphores, ... */
   /* USER CODE END RTOS_SEMAPHORES */
 
+  /* Create the timer(s) */
+  /* creation of LedHeartbeatTimer */
+  LedHeartbeatTimerHandle = osTimerNew(App_LedTimerCallback, osTimerPeriodic, NULL, &LedHeartbeatTimer_attributes);
+
   /* USER CODE BEGIN RTOS_TIMERS */
-  /* start timers, add new ones, ... */
+  if (osTimerStart(LedHeartbeatTimerHandle, 500U) != osOK)
+  {
+    Error_Handler();
+  }
   /* USER CODE END RTOS_TIMERS */
 
   /* Create the queue(s) */
@@ -505,6 +517,14 @@ void StartEmergencyTask(void *argument)
   /* USER CODE BEGIN StartEmergencyTask */
   App_EmergencyTask(argument);
   /* USER CODE END StartEmergencyTask */
+}
+
+/* App_LedTimerCallback function */
+void App_LedTimerCallback(void *argument)
+{
+  /* USER CODE BEGIN App_LedTimerCallback */
+  App_LedTimerCallbackImpl(argument);
+  /* USER CODE END App_LedTimerCallback */
 }
 
 /**

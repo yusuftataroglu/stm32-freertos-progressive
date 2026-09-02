@@ -23,7 +23,8 @@
 #define __MAIN_H
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 /* Includes ------------------------------------------------------------------*/
@@ -32,32 +33,36 @@ extern "C" {
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "cmsis_os2.h"
-/* USER CODE END Includes */
+    /* USER CODE END Includes */
 
-/* Exported types ------------------------------------------------------------*/
-/* USER CODE BEGIN ET */
+    /* Exported types ------------------------------------------------------------*/
+    /* USER CODE BEGIN ET */
 
-/* USER CODE END ET */
+    /* USER CODE END ET */
 
-/* Exported constants --------------------------------------------------------*/
-/* USER CODE BEGIN EC */
+    /* Exported constants --------------------------------------------------------*/
+    /* USER CODE BEGIN EC */
 
-/* USER CODE END EC */
+    /* USER CODE END EC */
 
-/* Exported macro ------------------------------------------------------------*/
-/* USER CODE BEGIN EM */
+    /* Exported macro ------------------------------------------------------------*/
+    /* USER CODE BEGIN EM */
 
-/* USER CODE END EM */
+    /* USER CODE END EM */
 
-/* Exported functions prototypes ---------------------------------------------*/
-void Error_Handler(void);
+    /* Exported functions prototypes ---------------------------------------------*/
+    void Error_Handler(void);
 
-/* USER CODE BEGIN EFP */
+    /* USER CODE BEGIN EFP */
+
+    void App_LedTimerCallbackImpl(void *argument);
 
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
 #define LCD_MSG_SIZE messageQueue_t
+#define LCD_MSG_DATA_SIZE 32
+#define APP_LED_TIMER_FLAG 0x01U
 #define B1_Pin GPIO_PIN_13
 #define B1_GPIO_Port GPIOC
 #define B1_EXTI_IRQn EXTI15_10_IRQn
@@ -86,9 +91,7 @@ void Error_Handler(void);
 #define SWO_Pin GPIO_PIN_3
 #define SWO_GPIO_Port GPIOB
 
-#define LCD_MSG_DATA_SIZE 32U
-
-/* USER CODE BEGIN Private defines */
+    /* USER CODE BEGIN Private defines */
     typedef struct
     {
         uint8_t event_id;
@@ -103,8 +106,9 @@ void Error_Handler(void);
     extern uint16_t adcData[2];
     extern messageQueue_t msg;
     extern DMA_HandleTypeDef hdma_adc1;
+    extern osThreadId_t LEDBlinkTaskHandle;
     extern osThreadId_t EmergencyTaskHandle;
-/* USER CODE END Private defines */
+    /* USER CODE END Private defines */
 
 #ifdef __cplusplus
 }
