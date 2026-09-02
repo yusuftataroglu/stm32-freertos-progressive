@@ -1,7 +1,81 @@
 #include "lcd.h"
 #include "cmsis_os2.h"
 #include "main.h"
+#include "core_cm3.h"
 #include "string.h"
+
+static void LCD_DWT_Init(void)
+{
+  CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+  DWT->CYCCNT = 0U;
+  DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+}
+
+static void LCD_DelayUs(uint32_t microseconds)
+{
+  uint32_t cycles = microseconds * (SystemCoreClock / 1000000U);
+  uint32_t start = DWT->CYCCNT;
+
+  while ((uint32_t)(DWT->CYCCNT - start) < cycles)
+  {
+  }
+}
+
+static void LCD_SetDataPinsMode(uint32_t mode)
+{
+  GPIO_InitTypeDef gpioInit = {0};
+
+  gpioInit.Pin = lcdData0_Pin | lcdData1_Pin | lcdData2_Pin | lcdData3_Pin;
+  gpioInit.Mode = mode;
+  gpioInit.Pull = GPIO_NOPULL;
+  gpioInit.Speed = GPIO_SPEED_FREQ_HIGH;
+  HAL_GPIO_Init(GPIOB, &gpioInit);
+}
+
+static uint8_t LCD_Read4Bits(void)
+{
+  uint8_t nibble = 0U;
+
+  HAL_GPIO_WritePin(lcdEnable_GPIO_Port, lcdEnable_Pin, GPIO_PIN_SET);
+  LCD_DelayUs(LCD_DELAY_ENABLE_US);
+
+  if (HAL_GPIO_ReadPin(lcdData0_GPIO_Port, lcdData0_Pin) == GPIO_PIN_SET)
+    nibble |= 0x01U;
+  if (HAL_GPIO_ReadPin(lcdData1_GPIO_Port, lcdData1_Pin) == GPIO_PIN_SET)
+    nibble |= 0x02U;
+  if (HAL_GPIO_ReadPin(lcdData2_GPIO_Port, lcdData2_Pin) == GPIO_PIN_SET)
+    nibble |= 0x04U;
+  if (HAL_GPIO_ReadPin(lcdData3_GPIO_Port, lcdData3_Pin) == GPIO_PIN_SET)
+    nibble |= 0x08U;
+
+  HAL_GPIO_WritePin(lcdEnable_GPIO_Port, lcdEnable_Pin, GPIO_PIN_RESET);
+  LCD_DelayUs(LCD_DELAY_ENABLE_US);
+
+  return nibble;
+}
+
+static void LCD_WaitUntilReady(void)
+{
+  uint32_t start = DWT->CYCCNT;
+  uint8_t highNibble;
+
+  LCD_SetDataPinsMode(GPIO_MODE_INPUT);
+  HAL_GPIO_WritePin(lcdRegisterSelect_GPIO_Port, lcdRegisterSelect_Pin,
+                    GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(lcdReadWrite_GPIO_Port, lcdReadWrite_Pin, GPIO_PIN_SET);
+  LCD_DelayUs(LCD_DELAY_ENABLE_US);
+
+  do
+  {
+    highNibble = LCD_Read4Bits();
+    (void)LCD_Read4Bits();
+  } while ((highNibble & 0x08U) != 0U &&
+           (uint32_t)(DWT->CYCCNT - start) <
+               LCD_BUSY_TIMEOUT_US * (SystemCoreClock / 1000000U));
+
+  HAL_GPIO_WritePin(lcdReadWrite_GPIO_Port, lcdReadWrite_Pin, GPIO_PIN_RESET);
+  LCD_SetDataPinsMode(GPIO_MODE_OUTPUT_PP);
+}
 
 static void LCD_Write4Bits(uint8_t nibble)
 {
@@ -16,10 +90,9 @@ static void LCD_Write4Bits(uint8_t nibble)
 
   // The HD44780 latches the nibble on the falling edge of Enable.
   HAL_GPIO_WritePin(lcdEnable_GPIO_Port, lcdEnable_Pin, GPIO_PIN_SET);
-  osDelay(LCD_DELAY_SHORT_MS); // Enable pulse width >= 450ns, using 1ms for
-                               // simplicity
+  LCD_DelayUs(LCD_DELAY_ENABLE_US);
   HAL_GPIO_WritePin(lcdEnable_GPIO_Port, lcdEnable_Pin, GPIO_PIN_RESET);
-  osDelay(LCD_DELAY_SHORT_MS);
+  LCD_DelayUs(LCD_DELAY_ENABLE_US);
 }
 
 void LCD_CursorShift(uint8_t isDirectionRight)
@@ -50,6 +123,8 @@ int8_t LCD_Cursor(uint8_t row, uint8_t column)
 
 void LCD_Init(void)
 {
+  LCD_DWT_Init();
+
   HAL_GPIO_WritePin(lcdRegisterSelect_GPIO_Port, lcdRegisterSelect_Pin,
                     GPIO_PIN_RESET);
   HAL_GPIO_WritePin(lcdReadWrite_GPIO_Port, lcdReadWrite_Pin, GPIO_PIN_RESET);
@@ -61,11 +136,11 @@ void LCD_Init(void)
   LCD_Write4Bits(0x03U);
   osDelay(5);
   LCD_Write4Bits(0x03U);
-  osDelay(1);
+  LCD_DelayUs(LCD_DELAY_INIT_US);
   LCD_Write4Bits(0x03U);
-  osDelay(1);
+  LCD_DelayUs(LCD_DELAY_INIT_US);
   LCD_Write4Bits(0x02U);
-  osDelay(1);
+  LCD_DelayUs(LCD_DELAY_INIT_US);
 
   // Function Set: 4-bit, 2 satır, 5x8 font
   LCD_WriteCommand(LCD_FUNC_SET | LCD_FUNC_4BIT | LCD_FUNC_2LINE |
@@ -94,31 +169,18 @@ void LCD_Init(void)
 
 void LCD_WriteCommand(uint8_t cmd)
 {
+  LCD_WaitUntilReady();
   HAL_GPIO_WritePin(lcdRegisterSelect_GPIO_Port, lcdRegisterSelect_Pin,
                     GPIO_PIN_RESET);
   HAL_GPIO_WritePin(lcdReadWrite_GPIO_Port, lcdReadWrite_Pin, GPIO_PIN_RESET);
-  osDelay(
-      LCD_DELAY_SHORT_MS); // Ensure RS and RW are stable before sending command
   LCD_Write4Bits(cmd >> 4);
   LCD_Write4Bits(cmd & 0x0FU);
-
-  if (cmd == LCD_CLEAR_DISPLAY || cmd == LCD_RETURN_HOME)
-  {
-    osDelay(
-        LCD_DELAY_LONG_MS); // 1.52ms delay clear ve return home komutları için
-  }
-  else
-  {
-    osDelay(LCD_DELAY_SHORT_MS); // 37us delay diğer komutlar için (daha sonra
-                                 // timer ile optimize edilebilir)
-  }
 }
 
 void LCD_Print(const uint8_t *data, uint8_t len)
 {
   HAL_GPIO_WritePin(lcdRegisterSelect_GPIO_Port, lcdRegisterSelect_Pin, GPIO_PIN_SET);
   HAL_GPIO_WritePin(lcdReadWrite_GPIO_Port, lcdReadWrite_Pin, GPIO_PIN_RESET);
-  osDelay(LCD_DELAY_SHORT_MS); // Ensure RS and RW are stable before sending data
 
   for (size_t i = 0; i < len; i++)
   {
@@ -127,15 +189,16 @@ void LCD_Print(const uint8_t *data, uint8_t len)
       LCD_Cursor(1, 0); // İkinci satıra geç
       HAL_GPIO_WritePin(lcdRegisterSelect_GPIO_Port, lcdRegisterSelect_Pin, GPIO_PIN_SET);
       HAL_GPIO_WritePin(lcdReadWrite_GPIO_Port, lcdReadWrite_Pin, GPIO_PIN_RESET); // LCD_Cursor RS ve RW pinlerini değiştirdiği için tekrar ayarlıyoruz
-      osDelay(LCD_DELAY_SHORT_MS);                                                 // Ensure RS and RW are stable before sending data
     }
     else if (i == 32)
     {
       break; // Stop writing if we reach the end of the second line
     }
+    LCD_WaitUntilReady();
+    HAL_GPIO_WritePin(lcdRegisterSelect_GPIO_Port, lcdRegisterSelect_Pin,
+                      GPIO_PIN_SET);
     LCD_Write4Bits(data[i] >> 4);
     LCD_Write4Bits(data[i] & 0x0FU);
-    osDelay(LCD_DELAY_SHORT_MS); // Execution time for writing a character is ~43us, using 1ms for simplicity
   }
 }
 void LCD_Clear(void)

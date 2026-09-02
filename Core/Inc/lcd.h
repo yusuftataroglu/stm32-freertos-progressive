@@ -74,9 +74,10 @@ F = 1: 5 × 10 dots, F = 0: 5 × 8 dots
 #define LCD_LINE1_ADDR 0x00U
 #define LCD_LINE2_ADDR 0x40U
 
-// Delay constants for LCD operations
-#define LCD_DELAY_LONG_MS 2
-#define LCD_DELAY_SHORT_MS 1
+// HD44780 bus timing.
+#define LCD_DELAY_ENABLE_US 1U
+#define LCD_DELAY_INIT_US 100U
+#define LCD_BUSY_TIMEOUT_US 2000U
 
     void LCD_Init(void);
     void LCD_Print(const uint8_t *data, uint8_t len);
