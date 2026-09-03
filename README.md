@@ -57,7 +57,11 @@ Core/
     app_tasks.c      # Tüm task implementasyonları
     app_callbacks.c  # ISR ve timer callback implementasyonları
     app_state.c      # Uygulama state ve alarm mantığı
+    app_commands.c   # UART/simülasyon komutlarını işleme
+    app_display.c    # Uygulama ekranlarını LCD'de çizme
     lcd.c            # HD44780 4-bit driver
   Inc/
     app_state.h      # Uygulama state arayüzü
+    app_commands.h   # Komut işleme arayüzü
+    app_display.h    # Ekran çizim arayüzü
     FreeRTOSConfig.h # RTOS konfigürasyonu

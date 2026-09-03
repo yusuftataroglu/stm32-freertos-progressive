@@ -47,6 +47,8 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     Core/Src/lcd.c
     Core/Src/app_state.c
+    Core/Src/app_commands.c
+    Core/Src/app_display.c
     Core/Src/app_tasks.c
     Core/Src/app_callbacks.c
 )
