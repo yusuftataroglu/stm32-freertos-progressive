@@ -41,9 +41,6 @@ messageQueue_t msg = {0};
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-ADC_HandleTypeDef hadc1;
-DMA_HandleTypeDef hdma_adc1;
-
 UART_HandleTypeDef huart1;
 
 /* Definitions for LEDBlinkTask */
@@ -67,19 +64,19 @@ const osThreadAttr_t LCDTask_attributes = {
     .stack_size = 128 * 4,
     .priority = (osPriority_t)osPriorityNormal,
 };
-/* Definitions for IntrnlTempSnsr */
-osThreadId_t IntrnlTempSnsrHandle;
-const osThreadAttr_t IntrnlTempSnsr_attributes = {
-    .name = "IntrnlTempSnsr",
-    .stack_size = 128 * 4,
-    .priority = (osPriority_t)osPriorityBelowNormal,
-};
 /* Definitions for EmergencyTask */
 osThreadId_t EmergencyTaskHandle;
 const osThreadAttr_t EmergencyTask_attributes = {
     .name = "EmergencyTask",
     .stack_size = 128 * 4,
     .priority = (osPriority_t)osPriorityHigh,
+};
+/* Definitions for DstSensorTask */
+osThreadId_t DstSensorTaskHandle;
+const osThreadAttr_t DstSensorTask_attributes = {
+    .name = "DstSensorTask",
+    .stack_size = 128 * 4,
+    .priority = (osPriority_t)osPriorityNormal,
 };
 /* Definitions for lcdQueue */
 osMessageQueueId_t lcdQueueHandle;
@@ -93,6 +90,10 @@ const osTimerAttr_t LedHeartbeatTimer_attributes = {
 osMutexId_t lcdMutexHandle;
 const osMutexAttr_t lcdMutex_attributes = {
     .name = "lcdMutex"};
+/* Definitions for DistanceReadySemaphore */
+osSemaphoreId_t DistanceReadySemaphoreHandle;
+const osSemaphoreAttr_t DistanceReadySemaphore_attributes = {
+    .name = "DistanceReadySemaphore"};
 /* USER CODE BEGIN PV */
 uint8_t uartData[32] = {0};
 uint16_t adcData[2] = {0};
@@ -101,14 +102,12 @@ uint16_t adcData[2] = {0};
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_DMA_Init(void);
-static void MX_ADC1_Init(void);
 static void MX_USART1_UART_Init(void);
 void StartLEDBlinkTask(void *argument);
 void StartUSARTTask(void *argument);
 void StartLCDTask(void *argument);
-void StartIntrnlTempSnsr(void *argument);
 void StartEmergencyTask(void *argument);
+void StartDistanceSensorTask(void *argument);
 void App_LedTimerCallback(void *argument);
 
 /* USER CODE BEGIN PFP */
@@ -148,8 +147,6 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_DMA_Init();
-  MX_ADC1_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
 
@@ -164,6 +161,10 @@ int main(void)
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
   /* USER CODE END RTOS_MUTEX */
+
+  /* Create the semaphores(s) */
+  /* creation of DistanceReadySemaphore */
+  DistanceReadySemaphoreHandle = osSemaphoreNew(1, 0, &DistanceReadySemaphore_attributes);
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
@@ -198,11 +199,11 @@ int main(void)
   /* creation of LCDTask */
   LCDTaskHandle = osThreadNew(StartLCDTask, NULL, &LCDTask_attributes);
 
-  /* creation of IntrnlTempSnsr */
-  IntrnlTempSnsrHandle = osThreadNew(StartIntrnlTempSnsr, NULL, &IntrnlTempSnsr_attributes);
-
   /* creation of EmergencyTask */
   EmergencyTaskHandle = osThreadNew(StartEmergencyTask, NULL, &EmergencyTask_attributes);
+
+  /* creation of DstSensorTask */
+  DstSensorTaskHandle = osThreadNew(StartDistanceSensorTask, NULL, &DstSensorTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -237,7 +238,6 @@ void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
-  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
   /** Initializes the RCC Oscillators according to the specified parameters
    * in the RCC_OscInitTypeDef structure.
@@ -265,67 +265,6 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_ADC;
-  PeriphClkInit.AdcClockSelection = RCC_ADCPCLK2_DIV8;
-  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
-  {
-    Error_Handler();
-  }
-}
-
-/**
- * @brief ADC1 Initialization Function
- * @param None
- * @retval None
- */
-static void MX_ADC1_Init(void)
-{
-
-  /* USER CODE BEGIN ADC1_Init 0 */
-
-  /* USER CODE END ADC1_Init 0 */
-
-  ADC_ChannelConfTypeDef sConfig = {0};
-
-  /* USER CODE BEGIN ADC1_Init 1 */
-
-  /* USER CODE END ADC1_Init 1 */
-
-  /** Common config
-   */
-  hadc1.Instance = ADC1;
-  hadc1.Init.ScanConvMode = ADC_SCAN_ENABLE;
-  hadc1.Init.ContinuousConvMode = ENABLE;
-  hadc1.Init.DiscontinuousConvMode = DISABLE;
-  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
-  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc1.Init.NbrOfConversion = 2;
-  if (HAL_ADC_Init(&hadc1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  /** Configure Regular Channel
-   */
-  sConfig.Channel = ADC_CHANNEL_TEMPSENSOR;
-  sConfig.Rank = ADC_REGULAR_RANK_1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_55CYCLES_5;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  /** Configure Regular Channel
-   */
-  sConfig.Channel = ADC_CHANNEL_VREFINT;
-  sConfig.Rank = ADC_REGULAR_RANK_2;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN ADC1_Init 2 */
-
-  /* USER CODE END ADC1_Init 2 */
 }
 
 /**
@@ -358,21 +297,6 @@ static void MX_USART1_UART_Init(void)
   /* USER CODE BEGIN USART1_Init 2 */
 
   /* USER CODE END USART1_Init 2 */
-}
-
-/**
- * Enable DMA controller clock
- */
-static void MX_DMA_Init(void)
-{
-
-  /* DMA controller clock enable */
-  __HAL_RCC_DMA1_CLK_ENABLE();
-
-  /* DMA interrupt init */
-  /* DMA1_Channel1_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 5, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
 }
 
 /**
@@ -491,20 +415,6 @@ void StartLCDTask(void *argument)
   /* USER CODE END StartLCDTask */
 }
 
-/* USER CODE BEGIN Header_StartIntrnlTempSnsr */
-/**
- * @brief Function implementing the IntrnlTempSnsr thread.
- * @param argument: Not used
- * @retval None
- */
-/* USER CODE END Header_StartIntrnlTempSnsr */
-void StartIntrnlTempSnsr(void *argument)
-{
-  /* USER CODE BEGIN StartIntrnlTempSnsr */
-  App_TempSensorTask(argument);
-  /* USER CODE END StartIntrnlTempSnsr */
-}
-
 /* USER CODE BEGIN Header_StartEmergencyTask */
 /**
  * @brief Function implementing the EmergencyTask thread.
@@ -519,6 +429,20 @@ void StartEmergencyTask(void *argument)
   /* USER CODE END StartEmergencyTask */
 }
 
+/* USER CODE BEGIN Header_StartDistanceSensorTask */
+/**
+ * @brief Function implementing the DstSensorTask thread.
+ * @param argument: Not used
+ * @retval None
+ */
+/* USER CODE END Header_StartDistanceSensorTask */
+void StartDistanceSensorTask(void *argument)
+{
+  /* USER CODE BEGIN StartDistanceSensorTask */
+  App_DistanceSensorTask(argument);
+  /* USER CODE END StartDistanceSensorTask */
+}
+
 /* App_LedTimerCallback function */
 void App_LedTimerCallback(void *argument)
 {
@@ -528,13 +452,9 @@ void App_LedTimerCallback(void *argument)
 }
 
 /**
- * @brief  Period elapsed callback in non blocking mode
- * @note   This function is called  when TIM4 interrupt took place, inside
- * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
- * a global variable "uwTick" used as application time base.
- * @param  htim : TIM handle
- * @retval None
- */
+  * @brief  Period elapsed callback in non blocking mode
+  App_DistanceSensorTask(argument);
+  */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   /* USER CODE BEGIN Callback 0 */

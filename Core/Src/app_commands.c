@@ -27,6 +27,7 @@ uint8_t App_CommandsProcess(AppState_t *state, const uint8_t *data,
 {
     char command[LCD_MSG_DATA_SIZE];
     int32_t value;
+    uint8_t events = 0U;
 
     if (length >= sizeof(command))
     {
@@ -37,7 +38,7 @@ uint8_t App_CommandsProcess(AppState_t *state, const uint8_t *data,
 
     if (strcmp(command, "status") == 0)
     {
-        return 1U;
+        return APP_COMMAND_STATE_UPDATED;
     }
 
     value = App_ParseValue(command, "temp", state->temperature_c10 / 10);
@@ -56,6 +57,7 @@ uint8_t App_CommandsProcess(AppState_t *state, const uint8_t *data,
     if (strncmp(command, "distance=", 9U) == 0 && value >= 0 && value <= UINT16_MAX)
     {
         state->distance_cm = (uint16_t)value;
+        events |= APP_COMMAND_DISTANCE_UPDATED;
     }
 
     value = App_ParseValue(command, "temp_limit", state->temperature_limit_c10 / 10);
@@ -80,10 +82,19 @@ uint8_t App_CommandsProcess(AppState_t *state, const uint8_t *data,
     {
         state->alarm_active = 0U;
     }
-    else
+    else if ((events & APP_COMMAND_DISTANCE_UPDATED) == 0U)
     {
         AppState_UpdateAlarm(state);
     }
 
-    return (strchr(command, '=') != NULL || strcmp(command, "alarm_reset") == 0);
+    if (strchr(command, '=') != NULL || strcmp(command, "alarm_reset") == 0)
+    {
+        events |= APP_COMMAND_STATE_UPDATED;
+    }
+    else
+    {
+        events |= APP_COMMAND_LCD_DRIVER;
+    }
+
+    return events;
 }

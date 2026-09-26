@@ -4,6 +4,6 @@
 void App_LEDBlinkTask(void *argument);
 void App_USARTTask(void *argument);
 void App_LCDTask(void *argument);
-void App_TempSensorTask(void *argument);
 void App_EmergencyTask(void *argument);
+void App_DistanceSensorTask(void *argument);
 #endif

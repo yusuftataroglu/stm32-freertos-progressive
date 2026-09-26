@@ -62,7 +62,6 @@ extern "C"
 /* Private defines -----------------------------------------------------------*/
 #define LCD_MSG_SIZE messageQueue_t
 #define LCD_MSG_DATA_SIZE 32
-#define APP_LED_TIMER_FLAG 0x01U
 #define B1_Pin GPIO_PIN_13
 #define B1_GPIO_Port GPIOC
 #define B1_EXTI_IRQn EXTI15_10_IRQn
@@ -91,7 +90,9 @@ extern "C"
 #define SWO_Pin GPIO_PIN_3
 #define SWO_GPIO_Port GPIOB
 
-    /* USER CODE BEGIN Private defines */
+/* USER CODE BEGIN Private defines */
+#define APP_LED_TIMER_FLAG 0x01U
+
     typedef struct
     {
         uint8_t event_id;
@@ -99,13 +100,11 @@ extern "C"
         uint8_t data[LCD_MSG_DATA_SIZE];
     } messageQueue_t;
     extern UART_HandleTypeDef huart1;
-    extern ADC_HandleTypeDef hadc1;
     extern osMessageQueueId_t lcdQueueHandle;
     extern osMutexId_t lcdMutexHandle;
+    extern osSemaphoreId_t DistanceReadySemaphoreHandle;
     extern uint8_t uartData[32];
-    extern uint16_t adcData[2];
     extern messageQueue_t msg;
-    extern DMA_HandleTypeDef hdma_adc1;
     extern osThreadId_t LEDBlinkTaskHandle;
     extern osThreadId_t EmergencyTaskHandle;
     /* USER CODE END Private defines */

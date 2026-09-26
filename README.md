@@ -40,7 +40,7 @@
 | 2 | **Queue** | UART → LCD mesaj iletimi | ✅ |
 | 3 | **Mutex** | LCD çoklu task paylaşımı | ✅ |
 | 4 | **Task Notification** | Buton → Emergency "ACIL!" | ✅ |
-| 5 | **Semaphore** | Binary/Counting - Queue farkı | ⏳ |
+| 5 | **Semaphore** | DistanceReadySemaphore ile mesafe ölçüm tamamlanması | ✅ |
 | 6 | **Software Timer** | CubeMX periodic timer → LED task flag | ✅ |
 | 7 | **Stack Analysis** | `uxTaskGetStackHighWaterMark` | ⏳ |
 | 8 | **Event Flags** | Çoklu koşul bekleme (ADC+BTN) | ⏳ |

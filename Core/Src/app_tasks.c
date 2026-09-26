@@ -1,6 +1,5 @@
 // app_tasks.c
 #include <string.h>
-#include <stdio.h>
 #include "stm32f103xb.h"
 #include "stm32f1xx_hal.h"
 #include "app_tasks.h"
@@ -52,11 +51,26 @@ void App_LCDTask(void *argument)
         if (msg.length > 0U && msg.data[0] == '/')
         {
             const char *command = (const char *)&msg.data[1];
-            if (msg.length > 1U &&
-                App_CommandsProcess(&appState, (const uint8_t *)command,
-                                    msg.length - 1U) != 0U)
+            if (msg.length > 1U)
             {
-                App_DisplayState(&appState);
+                uint8_t commandEvents = App_CommandsProcess(
+                    &appState, (const uint8_t *)command, msg.length - 1U);
+
+                if ((commandEvents & APP_COMMAND_DISTANCE_UPDATED) != 0U)
+                {
+                    (void)osSemaphoreRelease(DistanceReadySemaphoreHandle);
+                }
+
+                if ((commandEvents & APP_COMMAND_DISTANCE_UPDATED) == 0U &&
+                    (commandEvents & APP_COMMAND_STATE_UPDATED) != 0U)
+                {
+                    App_DisplayState(&appState);
+                }
+
+                if ((commandEvents & APP_COMMAND_LCD_DRIVER) != 0U)
+                {
+                    LCD_HandleCommand(&msg.data[1]);
+                }
             }
             else
             {
@@ -72,51 +86,6 @@ void App_LCDTask(void *argument)
     }
 }
 
-#define V25_MV 1430.0f     // 25 derecedeki tipik voltaj (1.43V)
-#define AVG_SLOPE 4.3f     // Tipik eğim (4.3 mV/C)
-#define VREFINT_MV 1200.0f // STM32F103 tipik dahili referans voltajı (1.2V)
-void App_TempSensorTask(void *argument)
-{
-    uint32_t nextWakeTime = osKernelGetTickCount();
-
-    HAL_ADC_Start_DMA(&hadc1, (uint32_t *)adcData, 2);
-    for (;;)
-    {
-        volatile uint16_t temp_raw = adcData[0];
-        volatile uint16_t vref_raw = adcData[1];
-
-        // STM32F103 için VREFINT (Tipik 1200mV) üzerinden gerçek VDDA hesabı
-        float vdda_mv = (VREFINT_MV * 4095.0f) / (float)vref_raw;
-
-        // Temperature sensor'ın gerçek çıkış voltajı (mV)
-        float vsense_mv = ((float)temp_raw * vdda_mv) / 4095.0f;
-
-        float temperature_c = ((V25_MV - vsense_mv) / AVG_SLOPE) + 25.0f;
-
-        char temp_str[16];
-        // Float desteği gerektirmeyen güvenli dönüşüm yöntemi
-        int32_t temp_int = (int32_t)temperature_c;
-        int32_t temp_frac = (int32_t)((temperature_c - (float)temp_int) * 10.0f);
-
-        // Eğer eksi sıcaklıklarda frac kısmı negatif çıkarsa pozitife çeviriyoruz
-        if (temp_frac < 0)
-            temp_frac = -temp_frac;
-
-        // Sadece tamsayı (%d) kullanarak yazdırıyoruz (Float desteği gerekmez!)
-        int len = snprintf(temp_str, sizeof(temp_str), "%ld.%ld C", temp_int, temp_frac);
-
-        if (osMutexAcquire(lcdMutexHandle, osWaitForever) == osOK)
-        {
-            LCD_Cursor(1, 10);
-            LCD_Print((uint8_t *)temp_str, (uint8_t)len);
-            osMutexRelease(lcdMutexHandle);
-        }
-
-        nextWakeTime += 2000U;
-        osDelayUntil(nextWakeTime);
-    }
-}
-
 void App_EmergencyTask(void *argument)
 {
     const uint8_t emergencyMsg[] = "ACIL!";
@@ -128,5 +97,23 @@ void App_EmergencyTask(void *argument)
         LCD_Cursor(1, 5);
         LCD_Print(emergencyMsg, strlen((const char *)emergencyMsg));
         osMutexRelease(lcdMutexHandle);
+    }
+}
+
+void App_DistanceSensorTask(void *argument)
+{
+    (void)argument;
+
+    for (;;)
+    {
+        if (osSemaphoreAcquire(DistanceReadySemaphoreHandle, 5000U) == osOK)
+        {
+            if (osMutexAcquire(lcdMutexHandle, osWaitForever) == osOK)
+            {
+                AppState_UpdateAlarm(&appState);
+                App_DisplayState(&appState);
+                osMutexRelease(lcdMutexHandle);
+            }
+        }
     }
 }
